@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chicken Shop Admin</title>
+    <title>ผู้ดูแลร้านไก่</title>
     <style>
       body { font-family: Arial, sans-serif; margin: 0; background: #fffaf2; color: #333; }
       .shell { max-width: 1100px; margin: 0 auto; padding: 24px; }
@@ -27,7 +27,7 @@
   </head>
   <body>
     <div class="shell">
-      <h1>Chicken Shop Admin Dashboard</h1>
+      <h1>แดชบอร์ดผู้ดูแลร้านไก่</h1>
       <div class="grid">
         <div class="card"><strong>ลูกค้า</strong><div class="metric" id="customers">-</div></div>
         <div class="card"><strong>ประเภทไก่</strong><div class="metric" id="chickenTypes">-</div></div>
@@ -53,7 +53,8 @@
             <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" /></label>
           </div>
           <div class="actions">
-            <button type="submit">บันทึกประเภทไก่</button>
+            <button type="submit" id="chickenSubmitBtn">บันทึกประเภทไก่</button>
+            <button type="button" class="secondary" id="cancelEditBtn" style="display:none;">ยกเลิก</button>
           </div>
         </form>
         <div class="status" id="chickenStatus"></div>
@@ -108,7 +109,7 @@
 
       <div class="card">
         <h3>คำสั่งซื้อล่าสุด</h3>
-        <pre id="ordersJson">Loading...</pre>
+        <pre id="ordersJson">กำลังโหลด...</pre>
       </div>
     </div>
 
@@ -121,12 +122,15 @@
       const itemsContainer = document.getElementById('itemsContainer');
       const addItemBtn = document.getElementById('addItemBtn');
       let chickenTypes = [];
-      let defaultCookingPrice = 0;
+      let defaultCookingPrice = 30;
+      let editingChickenTypeId = null;
 
       function applyDefaultCookingPrice() {
         const input = chickenForm.querySelector('input[name="cookingPrice"]');
-        if (input) {
-          input.value = defaultCookingPrice;
+        const preparationTypeSelect = chickenForm.querySelector('select[name="preparationType"]');
+        if (input && preparationTypeSelect) {
+          const isBoiled = preparationTypeSelect.value === 'boiled';
+          input.value = isBoiled ? (defaultCookingPrice || 30) : 0;
         }
       }
 
@@ -143,11 +147,53 @@
 
         chickenList.innerHTML = chickenTypes.map((item) => `
           <div class="item">
-            <span><strong>${item.name}</strong> · น้ำหนัก ${item.unitWeightKg} กก</span>
-            <span class="pill">${item.averagePrice.toLocaleString()} บาท</span>
+            <div>
+              <strong>${item.name}</strong> · น้ำหนัก ${item.unitWeightKg} กก<br/>
+              <small>รูปแบบ: <strong>${item.preparationType === 'boiled' ? 'ต้ม' : 'สด'}</strong> · ค่าเพิ่มการต้ม ${item.cookingPrice ?? 0} บาท</small>
+            </div>
+            <div class="actions">
+              <button type="button" class="secondary" onclick="editChickenType('${item.id}')">แก้ไข</button>
+            </div>
           </div>
         `).join('');
       }
+
+      function resetChickenForm() {
+        chickenForm.reset();
+        editingChickenTypeId = null;
+        document.getElementById('chickenSubmitBtn').textContent = 'บันทึกประเภทไก่';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+        applyDefaultCookingPrice();
+      }
+
+      function editChickenType(id) {
+        const item = chickenTypes.find((entry) => entry.id === id);
+        if (!item) {
+          return;
+        }
+
+        editingChickenTypeId = id;
+        const nameInput = chickenForm.querySelector('input[name="name"]');
+        const unitWeightInput = chickenForm.querySelector('input[name="unitWeightKg"]');
+        const priceInput = chickenForm.querySelector('input[name="price"]');
+        const preparationSelect = chickenForm.querySelector('select[name="preparationType"]');
+        const cookingInput = chickenForm.querySelector('input[name="cookingPrice"]');
+
+        if (nameInput) nameInput.value = item.name;
+        if (unitWeightInput) unitWeightInput.value = item.unitWeightKg;
+        if (priceInput) priceInput.value = item.averagePrice;
+        if (preparationSelect) preparationSelect.value = item.preparationType ?? 'fresh';
+        if (cookingInput) {
+          cookingInput.value = item.preparationType === 'boiled' ? (item.cookingPrice ?? defaultCookingPrice ?? 30) : 0;
+        }
+
+        document.getElementById('chickenSubmitBtn').textContent = 'อัปเดตประเภทไก่';
+        document.getElementById('cancelEditBtn').style.display = 'inline-block';
+        chickenStatus.textContent = '';
+        chickenStatus.className = 'status';
+      }
+
+      window.editChickenType = editChickenType;
 
       function addItemRow() {
         const wrapper = document.createElement('div');
@@ -173,7 +219,7 @@
         document.getElementById('orders').textContent = data.totalOrders;
         document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
         document.getElementById('ordersJson').textContent = JSON.stringify(data.orders, null, 2);
-        defaultCookingPrice = Number(data.defaultCookingPrice ?? 0);
+        defaultCookingPrice = Number(data.defaultCookingPrice ?? 30);
         applyDefaultCookingPrice();
       }
 
@@ -186,34 +232,39 @@
         }
       }
 
+      chickenForm.querySelector('select[name="preparationType"]').addEventListener('change', applyDefaultCookingPrice);
+      document.getElementById('cancelEditBtn').addEventListener('click', resetChickenForm);
+
       chickenForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(chickenForm);
+        const preparationType = formData.get('preparationType');
         const payload = {
           name: formData.get('name'),
           unitWeightKg: Number(formData.get('unitWeightKg')),
           pricePerKg: Number(formData.get('price')),
           averagePrice: Number(formData.get('price')),
-          preparationType: formData.get('preparationType'),
-          cookingPrice: Number(formData.get('cookingPrice')),
+          preparationType,
+          cookingPrice: preparationType === 'boiled' ? Number(formData.get('cookingPrice') || defaultCookingPrice || 30) : 0,
         };
 
-        setStatus(chickenStatus, 'กำลังบันทึก...');
-        const res = await fetch('/chicken-types', {
-          method: 'POST',
+        setStatus(chickenStatus, editingChickenTypeId ? 'กำลังอัปเดต...' : 'กำลังบันทึก...');
+        const url = editingChickenTypeId ? `/chicken-types/${editingChickenTypeId}` : '/chicken-types';
+        const method = editingChickenTypeId ? 'PATCH' : 'POST';
+        const res = await fetch(url, {
+          method,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
           const errorText = await res.text();
-          setStatus(chickenStatus, 'บันทึกไม่สำเร็จ: ' + errorText, true);
+          setStatus(chickenStatus, editingChickenTypeId ? 'อัปเดตไม่สำเร็จ: ' + errorText : 'บันทึกไม่สำเร็จ: ' + errorText, true);
           return;
         }
 
-        chickenForm.reset();
-        applyDefaultCookingPrice();
-        setStatus(chickenStatus, 'บันทึกประเภทไก่เรียบร้อย');
+        resetChickenForm();
+        setStatus(chickenStatus, editingChickenTypeId ? 'อัปเดตประเภทไก่เรียบร้อย' : 'บันทึกประเภทไก่เรียบร้อย');
         await loadChickenTypes();
         await loadDashboard();
       });

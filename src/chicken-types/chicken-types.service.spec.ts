@@ -39,4 +39,32 @@ describe('ChickenTypesService', () => {
     expect(created.name).toBe('ไก่จัมโบ้');
     expect(items.some((item) => item.id === created.id)).toBe(true);
   });
+
+  it('updates an existing chicken type', async () => {
+    const supabaseService = new SupabaseService();
+    const service = new ChickenTypesService(supabaseService);
+
+    const created = await service.create({
+      name: 'ไก่บ้าน',
+      unitWeightKg: 2,
+      pricePerKg: 100,
+      averagePrice: 200,
+      preparationType: 'fresh',
+      cookingPrice: 0,
+    });
+
+    const updated = await service.update(created.id, {
+      name: 'ไก่บ้าน (ต้ม)',
+      unitWeightKg: 2.5,
+      pricePerKg: 110,
+      averagePrice: 275,
+      preparationType: 'boiled',
+      cookingPrice: 30,
+    });
+
+    expect(updated).not.toBeNull();
+    expect(updated?.name).toBe('ไก่บ้าน (ต้ม)');
+    expect(updated?.preparationType).toBe('boiled');
+    expect(updated?.cookingPrice).toBe(30);
+  });
 });

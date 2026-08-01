@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { ChickenTypesService, CreateChickenTypeDto } from './chicken-types.service';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { ChickenTypesService, CreateChickenTypeDto, UpdateChickenTypeDto } from './chicken-types.service';
 
 @Controller('chicken-types')
 export class ChickenTypesController {
@@ -13,5 +13,10 @@ export class ChickenTypesController {
   @Get()
   findAll() {
     return this.chickenTypesService.findAll();
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateChickenTypeDto) {
+    return this.chickenTypesService.update(id, dto);
   }
 }

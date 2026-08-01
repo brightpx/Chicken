@@ -11,6 +11,8 @@ export interface CreateChickenTypeDto {
   cookingPrice?: number;
 }
 
+export interface UpdateChickenTypeDto extends Partial<CreateChickenTypeDto> {}
+
 export type ChickenTypeEntity = ChickenTypeRecord;
 
 @Injectable()
@@ -34,5 +36,9 @@ export class ChickenTypesService {
 
   async findAll(): Promise<ChickenTypeEntity[]> {
     return this.supabaseService.listChickenTypes();
+  }
+
+  async update(id: string, dto: UpdateChickenTypeDto): Promise<ChickenTypeEntity | null> {
+    return this.supabaseService.updateChickenType(id, dto);
   }
 }

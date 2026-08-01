@@ -4,8 +4,16 @@ create table if not exists chicken_types (
   unit_weight_kg double precision not null,
   price_per_kg double precision not null,
   average_price double precision not null,
-  is_active boolean default true
+  is_active boolean default true,
+  preparation_type text default 'fresh',
+  cooking_price double precision default 0
 );
+
+alter table chicken_types
+  add column if not exists preparation_type text default 'fresh';
+
+alter table chicken_types
+  add column if not exists cooking_price double precision default 0;
 
 create table if not exists customers (
   id text primary key,

@@ -130,6 +130,36 @@ export class SupabaseService {
     return this.memoryChickenTypes;
   }
 
+  async updateChickenType(id: string, dto: Partial<ChickenTypeRecord>): Promise<ChickenTypeRecord | null> {
+    const existing = this.memoryChickenTypes.find((item) => item.id === id);
+    if (existing) {
+      const updated = { ...existing, ...dto };
+      this.memoryChickenTypes.splice(this.memoryChickenTypes.indexOf(existing), 1, updated);
+      return updated;
+    }
+
+    if (this.client) {
+      const updatePayload: Record<string, unknown> = {};
+      if (dto.name !== undefined) updatePayload.name = dto.name;
+      if (dto.unitWeightKg !== undefined) updatePayload.unit_weight_kg = dto.unitWeightKg;
+      if (dto.pricePerKg !== undefined) updatePayload.price_per_kg = dto.pricePerKg;
+      if (dto.averagePrice !== undefined) updatePayload.average_price = dto.averagePrice;
+      if (dto.isActive !== undefined) updatePayload.is_active = dto.isActive;
+      if (dto.preparationType !== undefined) updatePayload.preparation_type = dto.preparationType;
+      if (dto.cookingPrice !== undefined) updatePayload.cooking_price = dto.cookingPrice;
+
+      const { data, error } = await this.client.from('chicken_types').update(updatePayload).eq('id', id).select('*').maybeSingle();
+      if (error) {
+        this.logger.warn(`Chicken type update failed: ${error.message}`);
+        return null;
+      }
+
+      return data ? this.mapChickenType(data) : null;
+    }
+
+    return null;
+  }
+
   async createCustomer(entity: CustomerRecord): Promise<CustomerRecord> {
     if (this.client) {
       const { error } = await this.client.from('customers').insert({
@@ -276,6 +306,18 @@ export class SupabaseService {
         preparation_type text default 'fresh',
         cooking_price double precision default 0
       );
+
+      do $$
+      begin
+        if not exists (
+          select 1
+          from information_schema.columns
+          where table_name = 'chicken_types' and column_name = 'cooking_price'
+        ) then
+          alter table chicken_types add column cooking_price double precision default 0;
+        end if;
+      end
+      $$;
 
       create table if not exists customers (
         id text primary key,
