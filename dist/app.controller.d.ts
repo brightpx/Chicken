@@ -5,7 +5,7 @@ export declare class AppController {
     private readonly appService;
     private readonly groqService;
     constructor(appService: AppService, groqService: GroqService);
-    getHello(): string;
+    getIndexPage(res: Response): void;
     getAdminPage(res: Response): void;
     getGroqResponse(prompt: string): Promise<{
         response: string;

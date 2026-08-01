@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
+import { SupabaseService } from '../common/supabase.service';
 
 export interface CreateOrderItemInput {
   chickenTypeId: string;
@@ -40,6 +41,7 @@ export class OrdersService {
   constructor(
     private readonly chickenTypesService: ChickenTypesService,
     private readonly customersService: CustomersService,
+    private readonly supabaseService?: SupabaseService,
   ) {}
 
   async create(input: CreateOrderInput): Promise<OrderResult> {
@@ -74,10 +76,16 @@ export class OrdersService {
     };
 
     this.orders.push(order);
+    await this.supabaseService?.createOrder(order as any);
     return order;
   }
 
   async findAll(): Promise<OrderResult[]> {
+    const persisted = await this.supabaseService?.listOrders();
+    if (persisted && persisted.length > 0) {
+      return persisted;
+    }
+
     return this.orders;
   }
 }

@@ -34,36 +34,15 @@ export class ChickenTypesService {
     };
 
     this.items.push(entity);
-
-    const client = this.supabaseService?.getClient();
-    if (client) {
-      await client.from('chicken_types').insert({
-        id: entity.id,
-        name: entity.name,
-        unit_weight_kg: entity.unitWeightKg,
-        price_per_kg: entity.pricePerKg,
-        average_price: entity.averagePrice,
-        is_active: entity.isActive,
-      });
-    }
+    await this.supabaseService?.createChickenType(entity);
 
     return entity;
   }
 
   async findAll(): Promise<ChickenTypeEntity[]> {
-    const client = this.supabaseService?.getClient();
-    if (client) {
-      const { data } = await client.from('chicken_types').select('*');
-      if (data) {
-        return data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          unitWeightKg: item.unit_weight_kg,
-          pricePerKg: item.price_per_kg,
-          averagePrice: item.average_price,
-          isActive: item.is_active,
-        }));
-      }
+    const persisted = await this.supabaseService?.listChickenTypes();
+    if (persisted && persisted.length > 0) {
+      return persisted;
     }
 
     return this.items;

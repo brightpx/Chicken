@@ -32,34 +32,15 @@ export class CustomersService {
     };
 
     this.items.push(entity);
-
-    const client = this.supabaseService?.getClient();
-    if (client) {
-      await client.from('customers').insert({
-        id: entity.id,
-        name: entity.name,
-        phone: entity.phone,
-        address: entity.address,
-        delivery_method: entity.deliveryMethod,
-      });
-    }
+    await this.supabaseService?.createCustomer(entity);
 
     return entity;
   }
 
   async findAll(): Promise<CustomerEntity[]> {
-    const client = this.supabaseService?.getClient();
-    if (client) {
-      const { data } = await client.from('customers').select('*');
-      if (data) {
-        return data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          phone: item.phone,
-          address: item.address,
-          deliveryMethod: item.delivery_method,
-        }));
-      }
+    const persisted = await this.supabaseService?.listCustomers();
+    if (persisted && persisted.length > 0) {
+      return persisted;
     }
 
     return this.items;

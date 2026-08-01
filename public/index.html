@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicken Shop Dashboard</title>
+    <style>
+      :root {
+        --bg: #fffaf3;
+        --card: #ffffff;
+        --text: #2f2a24;
+        --muted: #6f655d;
+        --accent: #ef6f3c;
+        --accent-2: #f5b041;
+        --border: #f0e0ce;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #fffaf3 0%, #fff2e3 100%);
+        color: var(--text);
+      }
+      .shell { max-width: 1200px; margin: 0 auto; padding: 24px; }
+      .hero {
+        display: flex; justify-content: space-between; align-items: center; gap: 16px;
+        background: linear-gradient(120deg, var(--accent), var(--accent-2));
+        color: white; border-radius: 24px; padding: 24px; box-shadow: 0 18px 40px rgba(239,111,60,0.2);
+      }
+      .hero h1 { margin: 0 0 8px; font-size: 2rem; }
+      .hero p { margin: 0; opacity: 0.95; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 20px; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 18px; padding: 18px; box-shadow: 0 12px 30px rgba(0,0,0,0.04);
+      }
+      .card h3 { margin: 0 0 8px; font-size: 0.95rem; color: var(--muted); }
+      .value { font-size: 1.7rem; font-weight: 700; }
+      .chart-card { margin-top: 20px; }
+      .chart-wrap { position: relative; height: 240px; }
+      canvas { width: 100% !important; height: 100% !important; }
+      .table-card { margin-top: 20px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 10px 12px; border-bottom: 1px solid var(--border); text-align: left; }
+      th { color: var(--muted); font-size: 0.85rem; text-transform: uppercase; }
+      .status { display:inline-block; padding:4px 8px; border-radius:999px; font-size:0.8rem; font-weight:600; }
+      .paid { background:#eaf8ef; color:#2e7d32; }
+      .pending { background:#fff4e5; color:#b36b00; }
+      .muted { color: var(--muted); }
+      .loading { color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <div class="hero">
+        <div>
+          <h1>Chicken Shop Dashboard</h1>
+          <p>ภาพรวมยอดขาย ลูกค้า และคำสั่งซื้อแบบทันที</p>
+        </div>
+        <div class="muted" id="updatedAt">กำลังเชื่อมต่อ…</div>
+      </div>
+
+      <div class="grid">
+        <div class="card"><h3>ลูกค้า</h3><div class="value" id="customers">-</div></div>
+        <div class="card"><h3>ประเภทไก่</h3><div class="value" id="chickenTypes">-</div></div>
+        <div class="card"><h3>คำสั่งซื้อ</h3><div class="value" id="orders">-</div></div>
+        <div class="card"><h3>รายได้</h3><div class="value" id="revenue">-</div></div>
+      </div>
+
+      <div class="card chart-card">
+        <h3>ภาพรวมคำสั่งซื้อ</h3>
+        <div class="chart-wrap"><canvas id="ordersChart"></canvas></div>
+      </div>
+
+      <div class="card table-card">
+        <h3>คำสั่งซื้อล่าสุด</h3>
+        <div id="ordersTable" class="loading">กำลังโหลดข้อมูล...</div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      let chartInstance = null;
+
+      function renderChart(orders) {
+        const labels = orders.slice(-5).map((order, index) => `Order ${index + 1}`);
+        const values = orders.slice(-5).map((order) => order.totalAmount);
+        const ctx = document.getElementById('ordersChart').getContext('2d');
+
+        if (chartInstance) {
+          chartInstance.destroy();
+        }
+
+        chartInstance = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'ยอดขาย',
+              data: values,
+              backgroundColor: ['#ef6f3c', '#f5b041', '#f39c12', '#e67e22', '#d35400'],
+              borderRadius: 8
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+      }
+
+      async function loadDashboard() {
+        const res = await fetch(`/admin/dashboard?ts=${Date.now()}`);
+        const data = await res.json();
+
+        document.getElementById('customers').textContent = data.totalCustomers;
+        document.getElementById('chickenTypes').textContent = data.totalChickenTypes;
+        document.getElementById('orders').textContent = data.totalOrders;
+        document.getElementById('revenue').textContent = `${data.totalRevenue.toLocaleString()} ฿`;
+        document.getElementById('updatedAt').textContent = `อัปเดต ${new Date().toLocaleTimeString('th-TH')}`;
+
+        renderChart(data.orders);
+
+        const table = document.getElementById('ordersTable');
+        if (!data.orders.length) {
+          table.innerHTML = '<p class="loading">ยังไม่มีคำสั่งซื้อ</p>';
+          return;
+        }
+
+        table.innerHTML = `
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>ลูกค้า</th>
+                <th>ยอดรวม</th>
+                <th>สถานะชำระ</th>
+                <th>สถานะจัดส่ง</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.orders.slice(-6).reverse().map((order, index) => `
+                <tr>
+                  <td>${index + 1}</td>
+                  <td>${order.customerName || order.customerId}</td>
+                  <td>${order.totalAmount.toLocaleString()} ฿</td>
+                  <td><span class="status ${order.paymentStatus === 'paid' ? 'paid' : 'pending'}">${order.paymentStatus}</span></td>
+                  <td>${order.deliveryStatus}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+      }
+
+      loadDashboard().catch((err) => {
+        document.getElementById('ordersTable').innerHTML = `<p class="loading">โหลดข้อมูลไม่สำเร็จ: ${err.message}</p>`;
+      });
+
+      setInterval(() => {
+        loadDashboard().catch(() => undefined);
+      }, 5000);
+
+      window.addEventListener('focus', () => {
+        loadDashboard().catch(() => undefined);
+      });
+    </script>
+  </body>
+</html>

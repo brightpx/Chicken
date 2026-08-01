@@ -2,11 +2,49 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
 
+interface ChickenTypeRecord {
+  id: string;
+  name: string;
+  unitWeightKg: number;
+  pricePerKg: number;
+  averagePrice: number;
+  isActive: boolean;
+}
+
+interface CustomerRecord {
+  id: string;
+  name: string;
+  phone: string;
+  address: string;
+  deliveryMethod: 'pickup' | 'home';
+}
+
+interface OrderItemRecord {
+  chickenTypeId: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+interface OrderRecord {
+  id?: string;
+  customerId: string;
+  deliveryMethod: 'pickup' | 'home';
+  deliveryLocation: string;
+  paymentStatus: 'pending' | 'paid' | 'partial';
+  deliveryStatus: 'pending' | 'delivered' | 'cancelled';
+  items: OrderItemRecord[];
+  totalAmount: number;
+}
+
 @Injectable()
 export class SupabaseService {
   private readonly logger = new Logger(SupabaseService.name);
   private client: SupabaseClient | null = null;
   private pool: Pool | null = null;
+  private readonly memoryChickenTypes: ChickenTypeRecord[] = [];
+  private readonly memoryCustomers: CustomerRecord[] = [];
+  private readonly memoryOrders: OrderRecord[] = [];
 
   constructor() {
     const url = process.env.SUPABASE_URL;
@@ -30,6 +68,134 @@ export class SupabaseService {
 
   getClient(): SupabaseClient | null {
     return this.client;
+  }
+
+  async createChickenType(entity: ChickenTypeRecord): Promise<ChickenTypeRecord> {
+    if (this.client) {
+      const { error } = await this.client.from('chicken_types').insert({
+        id: entity.id,
+        name: entity.name,
+        unit_weight_kg: entity.unitWeightKg,
+        price_per_kg: entity.pricePerKg,
+        average_price: entity.averagePrice,
+        is_active: entity.isActive,
+      });
+
+      if (error) {
+        this.logger.warn(`Chicken type insert failed: ${error.message}`);
+      } else {
+        return entity;
+      }
+    }
+
+    this.memoryChickenTypes.push(entity);
+    return entity;
+  }
+
+  async listChickenTypes(): Promise<ChickenTypeRecord[]> {
+    if (this.client) {
+      const { data, error } = await this.client.from('chicken_types').select('*');
+      if (error) {
+        this.logger.warn(`Chicken type fetch failed: ${error.message}`);
+      } else if (data) {
+        return data.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          unitWeightKg: item.unit_weight_kg,
+          pricePerKg: item.price_per_kg,
+          averagePrice: item.average_price,
+          isActive: item.is_active,
+        }));
+      }
+    }
+
+    return this.memoryChickenTypes;
+  }
+
+  async createCustomer(entity: CustomerRecord): Promise<CustomerRecord> {
+    if (this.client) {
+      const { error } = await this.client.from('customers').insert({
+        id: entity.id,
+        name: entity.name,
+        phone: entity.phone,
+        address: entity.address,
+        delivery_method: entity.deliveryMethod,
+      });
+
+      if (error) {
+        this.logger.warn(`Customer insert failed: ${error.message}`);
+      } else {
+        return entity;
+      }
+    }
+
+    this.memoryCustomers.push(entity);
+    return entity;
+  }
+
+  async listCustomers(): Promise<CustomerRecord[]> {
+    if (this.client) {
+      const { data, error } = await this.client.from('customers').select('*');
+      if (error) {
+        this.logger.warn(`Customer fetch failed: ${error.message}`);
+      } else if (data) {
+        return data.map((item: any) => ({
+          id: item.id,
+          name: item.name,
+          phone: item.phone,
+          address: item.address,
+          deliveryMethod: item.delivery_method,
+        }));
+      }
+    }
+
+    return this.memoryCustomers;
+  }
+
+  async createOrder(entity: OrderRecord): Promise<OrderRecord> {
+    if (this.client) {
+      const { error } = await this.client.from('orders').insert({
+        id: entity.id ?? `order-${Date.now()}`,
+        customer_id: entity.customerId,
+        delivery_method: entity.deliveryMethod,
+        delivery_location: entity.deliveryLocation,
+        payment_status: entity.paymentStatus,
+        delivery_status: entity.deliveryStatus,
+        items: entity.items,
+        total_amount: entity.totalAmount,
+      });
+
+      if (error) {
+        this.logger.warn(`Order insert failed: ${error.message}`);
+      } else {
+        return entity;
+      }
+    }
+
+    this.memoryOrders.push(entity);
+    return entity;
+  }
+
+  async listOrders(): Promise<OrderRecord[]> {
+    if (this.client) {
+      const { data, error } = await this.client.from('orders').select('*');
+      if (error) {
+        this.logger.warn(`Order fetch failed: ${error.message}`);
+      } else if (data) {
+        return data.map((item: any) => ({
+          id: item.id,
+          customerId: item.customer_id,
+          deliveryMethod: item.delivery_method,
+          deliveryLocation: item.delivery_location,
+          paymentStatus: item.payment_status,
+          deliveryStatus: item.delivery_status,
+          items: item.items,
+          totalAmount: item.total_amount,
+        }));
+      }
+    }
+
+    return this.memoryOrders;
   }
 
   private async initializeSchema() {

@@ -1,42 +1,276 @@
 <!doctype html>
-<html lang="en">
+<html lang="th">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Chicken Shop Admin</title>
     <style>
-      body { font-family: Arial, sans-serif; margin: 2rem; background: #fffaf2; color: #333; }
-      .card { background: white; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+      body { font-family: Arial, sans-serif; margin: 0; background: #fffaf2; color: #333; }
+      .shell { max-width: 1100px; margin: 0 auto; padding: 24px; }
+      .card { background: white; border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
       .metric { font-size: 1.4rem; font-weight: bold; color: #d9534f; }
+      form { display: grid; gap: 0.8rem; }
+      .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.8rem; }
+      label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.95rem; }
+      input, select, button { padding: 0.7rem; border-radius: 8px; border: 1px solid #e0d1b7; font-size: 0.95rem; }
+      button { background: #d9534f; color: white; cursor: pointer; border: none; }
+      button.secondary { background: #f5b041; }
+      .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #fce8d4; color: #8a4d12; font-size: 0.8rem; }
+      .list { display: grid; gap: 0.5rem; }
+      .item { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0.8rem; border: 1px solid #f0e0ce; border-radius: 8px; }
+      .status { margin-top: 0.5rem; color: #0a7f3e; font-weight: 600; }
+      .error { color: #c0392b; }
       pre { background: #f8f8f8; padding: 1rem; border-radius: 8px; overflow: auto; }
+      .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
     </style>
   </head>
   <body>
-    <h1>Chicken Shop Admin Dashboard</h1>
-    <div class="grid">
-      <div class="card"><strong>Total Customers</strong><div class="metric" id="customers">-</div></div>
-      <div class="card"><strong>Total Chicken Types</strong><div class="metric" id="chickenTypes">-</div></div>
-      <div class="card"><strong>Total Orders</strong><div class="metric" id="orders">-</div></div>
-      <div class="card"><strong>Total Revenue</strong><div class="metric" id="revenue">-</div></div>
+    <div class="shell">
+      <h1>Chicken Shop Admin Dashboard</h1>
+      <div class="grid">
+        <div class="card"><strong>ลูกค้า</strong><div class="metric" id="customers">-</div></div>
+        <div class="card"><strong>ประเภทไก่</strong><div class="metric" id="chickenTypes">-</div></div>
+        <div class="card"><strong>คำสั่งซื้อ</strong><div class="metric" id="orders">-</div></div>
+        <div class="card"><strong>รายได้</strong><div class="metric" id="revenue">-</div></div>
+      </div>
+
+      <div class="card">
+        <h3>เพิ่มประเภทไก่และราคา</h3>
+        <form id="chickenForm">
+          <div class="row">
+            <label>ชื่อประเภทไก่<input name="name" required /></label>
+            <label>น้ำหนัก/กิโลกรัม<input name="unitWeightKg" type="number" step="0.1" required /></label>
+            <label>ราคา (บาท)<input name="price" type="number" step="0.01" required /></label>
+          </div>
+          <div class="actions">
+            <button type="submit">บันทึกประเภทไก่</button>
+          </div>
+        </form>
+        <div class="status" id="chickenStatus"></div>
+      </div>
+
+      <div class="card">
+        <h3>เพิ่มคำสั่งซื้อใหม่</h3>
+        <form id="orderForm">
+          <div class="row">
+            <label>ชื่อลูกค้า<input name="customerName" required /></label>
+            <label>เบอร์โทร<input name="phone" required /></label>
+            <label>ที่อยู่<input name="address" required /></label>
+          </div>
+          <div class="row">
+            <label>วิธีจัดส่ง
+              <select name="deliveryMethod">
+                <option value="pickup">รับที่ร้าน</option>
+                <option value="home">จัดส่งบ้าน</option>
+              </select>
+            </label>
+            <label>สถานที่จัดส่ง<input name="deliveryLocation" required /></label>
+            <label>สถานะชำระ
+              <select name="paymentStatus">
+                <option value="pending">รอดำเนินการ</option>
+                <option value="paid">ชำระแล้ว</option>
+                <option value="partial">บางส่วน</option>
+              </select>
+            </label>
+          </div>
+          <div class="row">
+            <label>สถานะจัดส่ง
+              <select name="deliveryStatus">
+                <option value="pending">รอดำเนินการ</option>
+                <option value="delivered">จัดส่งแล้ว</option>
+                <option value="cancelled">ยกเลิก</option>
+              </select>
+            </label>
+          </div>
+          <div id="itemsContainer"></div>
+          <div class="actions">
+            <button type="button" class="secondary" id="addItemBtn">เพิ่มรายการไก่</button>
+            <button type="submit">บันทึกคำสั่งซื้อ</button>
+          </div>
+        </form>
+        <div class="status" id="orderStatus"></div>
+      </div>
+
+      <div class="card">
+        <h3>ประเภทไก่ที่มีอยู่</h3>
+        <div class="list" id="chickenList"></div>
+      </div>
+
+      <div class="card">
+        <h3>คำสั่งซื้อล่าสุด</h3>
+        <pre id="ordersJson">Loading...</pre>
+      </div>
     </div>
-    <div class="card">
-      <h3>Latest Orders</h3>
-      <pre id="ordersJson">Loading...</pre>
-    </div>
+
     <script>
-      fetch('/admin/dashboard')
-        .then((res) => res.json())
-        .then((data) => {
-          document.getElementById('customers').textContent = data.totalCustomers;
-          document.getElementById('chickenTypes').textContent = data.totalChickenTypes;
-          document.getElementById('orders').textContent = data.totalOrders;
-          document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
-          document.getElementById('ordersJson').textContent = JSON.stringify(data.orders, null, 2);
-        })
-        .catch((err) => {
-          document.getElementById('ordersJson').textContent = 'Unable to load dashboard: ' + err.message;
+      const chickenForm = document.getElementById('chickenForm');
+      const orderForm = document.getElementById('orderForm');
+      const chickenStatus = document.getElementById('chickenStatus');
+      const orderStatus = document.getElementById('orderStatus');
+      const chickenList = document.getElementById('chickenList');
+      const itemsContainer = document.getElementById('itemsContainer');
+      const addItemBtn = document.getElementById('addItemBtn');
+      let chickenTypes = [];
+
+      function setStatus(element, message, isError = false) {
+        element.textContent = message;
+        element.className = isError ? 'status error' : 'status';
+      }
+
+      function renderChickenTypes() {
+        if (!chickenTypes.length) {
+          chickenList.innerHTML = '<div class="item"><span>ยังไม่มีประเภทไก่</span></div>';
+          return;
+        }
+
+        chickenList.innerHTML = chickenTypes.map((item) => `
+          <div class="item">
+            <span><strong>${item.name}</strong> · น้ำหนัก ${item.unitWeightKg} กก</span>
+            <span class="pill">${item.averagePrice.toLocaleString()} บาท</span>
+          </div>
+        `).join('');
+      }
+
+      function addItemRow() {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'row';
+        wrapper.innerHTML = `
+          <label>ประเภทไก่
+            <select name="chickenTypeId" required>
+              ${chickenTypes.map((item) => `<option value="${item.id}">${item.name} · ${item.averagePrice.toLocaleString()} บาท</option>`).join('')}
+            </select>
+          </label>
+          <label>จำนวน<input name="quantity" type="number" min="1" value="1" required /></label>
+          <label>ลบรายการ<button type="button" class="secondary" onclick="this.parentElement.parentElement.remove()">ลบ</button></label>
+        `;
+        itemsContainer.appendChild(wrapper);
+      }
+
+      async function loadDashboard() {
+        const res = await fetch('/admin/dashboard?ts=' + Date.now());
+        const data = await res.json();
+
+        document.getElementById('customers').textContent = data.totalCustomers;
+        document.getElementById('chickenTypes').textContent = data.totalChickenTypes;
+        document.getElementById('orders').textContent = data.totalOrders;
+        document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
+        document.getElementById('ordersJson').textContent = JSON.stringify(data.orders, null, 2);
+      }
+
+      async function loadChickenTypes() {
+        const res = await fetch('/chicken-types');
+        chickenTypes = await res.json();
+        renderChickenTypes();
+        if (!itemsContainer.querySelector('select')) {
+          addItemRow();
+        }
+      }
+
+      chickenForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(chickenForm);
+        const payload = {
+          name: formData.get('name'),
+          unitWeightKg: Number(formData.get('unitWeightKg')),
+          pricePerKg: Number(formData.get('price')),
+          averagePrice: Number(formData.get('price')),
+        };
+
+        setStatus(chickenStatus, 'กำลังบันทึก...');
+        const res = await fetch('/chicken-types', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          setStatus(chickenStatus, 'บันทึกไม่สำเร็จ: ' + errorText, true);
+          return;
+        }
+
+        chickenForm.reset();
+        setStatus(chickenStatus, 'บันทึกประเภทไก่เรียบร้อย');
+        await loadChickenTypes();
+        await loadDashboard();
+      });
+
+      orderForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(orderForm);
+        const customerPayload = {
+          name: formData.get('customerName'),
+          phone: formData.get('phone'),
+          address: formData.get('address'),
+          deliveryMethod: formData.get('deliveryMethod'),
+        };
+
+        const items = Array.from(itemsContainer.querySelectorAll('.row')).map((row) => {
+          const select = row.querySelector('select[name="chickenTypeId"]');
+          const quantityInput = row.querySelector('input[name="quantity"]');
+          return {
+            chickenTypeId: select.value,
+            quantity: Number(quantityInput.value),
+          };
+        });
+
+        if (!items.length || items.some((item) => !item.chickenTypeId || item.quantity <= 0)) {
+          setStatus(orderStatus, 'กรุณาเลือกรายการไก่ให้ครบถ้วน', true);
+          return;
+        }
+
+        setStatus(orderStatus, 'กำลังสร้างคำสั่งซื้อ...');
+        const customerRes = await fetch('/customers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(customerPayload),
+        });
+
+        if (!customerRes.ok) {
+          const errorText = await customerRes.text();
+          setStatus(orderStatus, 'สร้างลูกค้าไม่สำเร็จ: ' + errorText, true);
+          return;
+        }
+
+        const customer = await customerRes.json();
+        const orderPayload = {
+          customerId: customer.id,
+          deliveryMethod: formData.get('deliveryMethod'),
+          deliveryLocation: formData.get('deliveryLocation'),
+          paymentStatus: formData.get('paymentStatus'),
+          deliveryStatus: formData.get('deliveryStatus'),
+          items,
+        };
+
+        const orderRes = await fetch('/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(orderPayload),
+        });
+
+        if (!orderRes.ok) {
+          const errorText = await orderRes.text();
+          setStatus(orderStatus, 'สร้างคำสั่งซื้อไม่สำเร็จ: ' + errorText, true);
+          return;
+        }
+
+        orderForm.reset();
+        itemsContainer.innerHTML = '';
+        addItemRow();
+        setStatus(orderStatus, 'สร้างคำสั่งซื้อเรียบร้อย');
+        await loadChickenTypes();
+        await loadDashboard();
+      });
+
+      addItemBtn.addEventListener('click', addItemRow);
+      addItemRow();
+      loadChickenTypes().catch(() => {
+        setStatus(chickenStatus, 'โหลดประเภทไก่ไม่สำเร็จ', true);
+      });
+      loadDashboard().catch(() => {
+        document.getElementById('ordersJson').textContent = 'โหลดข้อมูลไม่สำเร็จ';
+      });
     </script>
   </body>
 </html>

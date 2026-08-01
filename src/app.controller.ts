@@ -13,8 +13,20 @@ export class AppController {
   ) {}
 
   @Get()
-  getHello(): string {
-    return this.appService.getHello();
+  getIndexPage(@Res() res: Response) {
+    const candidates = [
+      path.join(process.cwd(), 'public', 'index.html'),
+      path.join(process.cwd(), 'dist', 'public', 'index.html'),
+      path.join(__dirname, '..', 'public', 'index.html'),
+    ];
+
+    const filePath = candidates.find((candidate) => fs.existsSync(candidate));
+    if (filePath) {
+      res.sendFile(filePath);
+      return;
+    }
+
+    res.status(404).send('Index page not found');
   }
 
   @Get('admin-page')
