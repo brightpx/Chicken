@@ -198,6 +198,18 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         this.memoryOrders.push(order);
         return order;
     }
+    async findOrderById(id) {
+        if (this.client) {
+            const { data, error } = await this.client.from('orders').select('*').eq('id', id).maybeSingle();
+            if (error) {
+                this.logger.warn(`Order lookup failed: ${error.message}`);
+            }
+            else if (data) {
+                return this.mapOrder(data);
+            }
+        }
+        return this.memoryOrders.find((item) => item.id === id) ?? null;
+    }
     async listOrders() {
         if (this.client) {
             const { data, error } = await this.client.from('orders').select('*');
@@ -227,6 +239,10 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
                 updatePayload.delivery_method = dto.deliveryMethod;
             if (dto.deliveryLocation !== undefined)
                 updatePayload.delivery_location = dto.deliveryLocation;
+            if (dto.items !== undefined)
+                updatePayload.items = dto.items;
+            if (dto.totalAmount !== undefined)
+                updatePayload.total_amount = dto.totalAmount;
             const { data, error } = await this.client.from('orders').update(updatePayload).eq('id', id).select('*').maybeSingle();
             if (error) {
                 this.logger.warn(`Order update failed: ${error.message}`);

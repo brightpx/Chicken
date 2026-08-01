@@ -244,6 +244,19 @@ export class SupabaseService {
     return order;
   }
 
+  async findOrderById(id: string): Promise<OrderRecord | null> {
+    if (this.client) {
+      const { data, error } = await this.client.from('orders').select('*').eq('id', id).maybeSingle();
+      if (error) {
+        this.logger.warn(`Order lookup failed: ${error.message}`);
+      } else if (data) {
+        return this.mapOrder(data);
+      }
+    }
+
+    return this.memoryOrders.find((item) => item.id === id) ?? null;
+  }
+
   async listOrders(): Promise<OrderRecord[]> {
     if (this.client) {
       const { data, error } = await this.client.from('orders').select('*');
@@ -271,6 +284,8 @@ export class SupabaseService {
       if (dto.deliveryStatus !== undefined) updatePayload.delivery_status = dto.deliveryStatus;
       if (dto.deliveryMethod !== undefined) updatePayload.delivery_method = dto.deliveryMethod;
       if (dto.deliveryLocation !== undefined) updatePayload.delivery_location = dto.deliveryLocation;
+      if (dto.items !== undefined) updatePayload.items = dto.items;
+      if (dto.totalAmount !== undefined) updatePayload.total_amount = dto.totalAmount;
 
       const { data, error } = await this.client.from('orders').update(updatePayload).eq('id', id).select('*').maybeSingle();
       if (error) {

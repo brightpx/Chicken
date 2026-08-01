@@ -18,10 +18,16 @@ export interface CreateOrderInput {
     items: CreateOrderItemInput[];
 }
 export interface UpdateOrderInput {
+    customerId?: string;
+    customerName?: string;
+    phone?: string;
+    address?: string;
     paymentStatus?: 'pending' | 'paid' | 'partial';
     deliveryStatus?: 'pending' | 'delivered' | 'cancelled';
     deliveryMethod?: 'pickup' | 'home';
     deliveryLocation?: string;
+    items?: CreateOrderItemInput[];
+    totalAmount?: number;
 }
 export type OrderItemResult = OrderItemRecord;
 export type OrderResult = OrderRecord;

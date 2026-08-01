@@ -54,6 +54,7 @@ export declare class SupabaseService {
     findCustomerById(id: string): Promise<CustomerRecord | null>;
     listCustomers(): Promise<CustomerRecord[]>;
     createOrder(entity: OrderRecord): Promise<OrderRecord>;
+    findOrderById(id: string): Promise<OrderRecord | null>;
     listOrders(): Promise<OrderRecord[]>;
     updateOrder(id: string, dto: Partial<OrderRecord>): Promise<OrderRecord | null>;
     private mapChickenType;

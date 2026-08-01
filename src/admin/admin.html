@@ -559,8 +559,9 @@
           return;
         }
 
+        const createdOrder = await orderRes.json();
         resetOrderForm();
-        setStatus(orderStatus, 'สร้างคำสั่งซื้อเรียบร้อย');
+        setStatus(orderStatus, `สร้างคำสั่งซื้อเรียบร้อย (Order ID: ${createdOrder.id || '-'})`);
         await loadChickenTypes();
         await loadDashboard();
       });

@@ -23,10 +23,16 @@ export interface CreateOrderInput {
 }
 
 export interface UpdateOrderInput {
+  customerId?: string;
+  customerName?: string;
+  phone?: string;
+  address?: string;
   paymentStatus?: 'pending' | 'paid' | 'partial';
   deliveryStatus?: 'pending' | 'delivered' | 'cancelled';
   deliveryMethod?: 'pickup' | 'home';
   deliveryLocation?: string;
+  items?: CreateOrderItemInput[];
+  totalAmount?: number;
 }
 
 export type OrderItemResult = OrderItemRecord;
@@ -87,6 +93,38 @@ export class OrdersService {
   }
 
   async update(id: string, input: UpdateOrderInput): Promise<OrderResult | null> {
-    return this.supabaseService.updateOrder(id, input);
+    const existing = await this.supabaseService.findOrderById(id);
+    if (!existing) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const updatedItems = input.items
+      ? await Promise.all(
+          input.items.map(async (item) => {
+            const chickenTypes = await this.chickenTypesService.findAll();
+            const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
+            const itemPreparationType = item.preparationType ?? 'fresh';
+            const itemCookingPrice = itemPreparationType === 'boiled' ? (item.cookingPrice ?? getDefaultCookingPrice() ?? 30) : 0;
+            const unitPrice = (chicken?.averagePrice ?? 0) + itemCookingPrice;
+            const totalPrice = unitPrice * item.quantity;
+            return {
+              chickenTypeId: item.chickenTypeId,
+              quantity: item.quantity,
+              unitPrice,
+              totalPrice,
+              preparationType: itemPreparationType,
+              cookingPrice: itemCookingPrice,
+            } satisfies OrderItemRecord;
+          }),
+        )
+      : existing.items;
+
+    const updatedOrder = {
+      ...input,
+      items: updatedItems,
+      totalAmount: input.totalAmount ?? updatedItems.reduce((sum, item) => sum + item.totalPrice, 0),
+    } satisfies Partial<OrderRecord>;
+
+    return this.supabaseService.updateOrder(id, updatedOrder);
   }
 }

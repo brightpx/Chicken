@@ -63,7 +63,34 @@ let OrdersService = class OrdersService {
         return this.supabaseService.listOrders();
     }
     async update(id, input) {
-        return this.supabaseService.updateOrder(id, input);
+        const existing = await this.supabaseService.findOrderById(id);
+        if (!existing) {
+            throw new common_1.NotFoundException('Order not found');
+        }
+        const updatedItems = input.items
+            ? await Promise.all(input.items.map(async (item) => {
+                const chickenTypes = await this.chickenTypesService.findAll();
+                const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
+                const itemPreparationType = item.preparationType ?? 'fresh';
+                const itemCookingPrice = itemPreparationType === 'boiled' ? (item.cookingPrice ?? (0, app_config_1.getDefaultCookingPrice)() ?? 30) : 0;
+                const unitPrice = (chicken?.averagePrice ?? 0) + itemCookingPrice;
+                const totalPrice = unitPrice * item.quantity;
+                return {
+                    chickenTypeId: item.chickenTypeId,
+                    quantity: item.quantity,
+                    unitPrice,
+                    totalPrice,
+                    preparationType: itemPreparationType,
+                    cookingPrice: itemCookingPrice,
+                };
+            }))
+            : existing.items;
+        const updatedOrder = {
+            ...input,
+            items: updatedItems,
+            totalAmount: input.totalAmount ?? updatedItems.reduce((sum, item) => sum + item.totalPrice, 0),
+        };
+        return this.supabaseService.updateOrder(id, updatedOrder);
     }
 };
 exports.OrdersService = OrdersService;
