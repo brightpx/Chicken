@@ -15,6 +15,15 @@ export declare class AdminController {
         orders: {
             customerName: string;
             customer: import("../common/supabase.service").CustomerRecord | null;
+            items: {
+                chickenTypeName: string;
+                chickenTypeId: string;
+                quantity: number;
+                unitPrice: number;
+                totalPrice: number;
+                preparationType: "fresh" | "boiled";
+                cookingPrice: number;
+            }[];
             id: string;
             customerId: string;
             deliveryMethod: "pickup" | "home";
@@ -23,7 +32,6 @@ export declare class AdminController {
             deliveryStatus: "pending" | "delivered" | "cancelled";
             preparationType?: "fresh" | "boiled";
             cookingPrice?: number;
-            items: import("../common/supabase.service").OrderItemRecord[];
             totalAmount: number;
         }[];
     }>;

@@ -328,7 +328,13 @@
         tableBody.innerHTML = dashboardOrders.map((order) => {
           const customer = order.customer || {};
           const items = Array.isArray(order.items) ? order.items : [];
-          const itemsText = items.map((item) => `${item.quantity ?? 0} x ${item.chickenTypeName ?? 'ไก่'}`).join(', ');
+          const itemsText = items
+            .map((item) => {
+              const matchedType = chickenTypes.find((type) => type.id === item.chickenTypeId);
+              const name = item.chickenTypeName || matchedType?.name || 'ไก่';
+              return `${item.quantity ?? 0} x ${name}`;
+            })
+            .join(', ');
           return `
             <tr>
               <td><strong>${order.id ?? '-'}</strong><br/><small>${itemsText || '-'}</small></td>

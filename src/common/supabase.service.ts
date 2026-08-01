@@ -24,6 +24,7 @@ export interface CustomerRecord {
 
 export interface OrderItemRecord {
   chickenTypeId: string;
+  chickenTypeName?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

@@ -21,10 +21,20 @@ export class AdminController {
     ]);
 
     const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
+    const chickenTypeMap = new Map(chickenTypes.map((chickenType) => [chickenType.id, chickenType]));
     const enrichedOrders = orders.map((order) => ({
       ...order,
       customerName: customerMap.get(order.customerId)?.name ?? order.customerId,
       customer: customerMap.get(order.customerId) ?? null,
+      items: Array.isArray(order.items)
+        ? order.items.map((item) => {
+            const chickenType = chickenTypeMap.get(item.chickenTypeId);
+            return {
+              ...item,
+              chickenTypeName: chickenType?.name ?? 'ไก่',
+            };
+          })
+        : [],
     }));
 
     const totalRevenue = enrichedOrders.reduce((sum: number, order) => sum + order.totalAmount, 0);
