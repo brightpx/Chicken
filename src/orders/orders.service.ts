@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
-import { SupabaseService } from '../common/supabase.service';
+import { OrderItemRecord, OrderRecord, SupabaseService } from '../common/supabase.service';
 
 export interface CreateOrderItemInput {
   chickenTypeId: string;
@@ -18,39 +18,21 @@ export interface CreateOrderInput {
   items: CreateOrderItemInput[];
 }
 
-export interface OrderItemResult {
-  chickenTypeId: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-  preparationType: 'fresh' | 'boiled';
-  cookingPrice: number;
-}
-
-export interface OrderResult {
-  customerId: string;
-  deliveryMethod: 'pickup' | 'home';
-  deliveryLocation: string;
-  paymentStatus: 'pending' | 'paid' | 'partial';
-  deliveryStatus: 'pending' | 'delivered' | 'cancelled';
-  items: OrderItemResult[];
-  totalAmount: number;
-}
+export type OrderItemResult = OrderItemRecord;
+export type OrderResult = OrderRecord;
 
 @Injectable()
 export class OrdersService {
-  private readonly orders: OrderResult[] = [];
-
   constructor(
     private readonly chickenTypesService: ChickenTypesService,
     private readonly customersService: CustomersService,
-    private readonly supabaseService?: SupabaseService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   async create(input: CreateOrderInput): Promise<OrderResult> {
-    const customer = (await this.customersService.findAll()).find((item) => item.id === input.customerId);
+    const customer = await this.customersService.findById(input.customerId);
     if (!customer) {
-      throw new Error('Customer not found');
+      throw new NotFoundException('Customer not found');
     }
 
     const chickenTypes = await this.chickenTypesService.findAll();
@@ -73,6 +55,7 @@ export class OrdersService {
     });
 
     const order: OrderResult = {
+      id: `order-${Date.now()}`,
       customerId: input.customerId,
       deliveryMethod: input.deliveryMethod,
       deliveryLocation: input.deliveryLocation,
@@ -82,17 +65,10 @@ export class OrdersService {
       totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
     };
 
-    this.orders.push(order);
-    await this.supabaseService?.createOrder(order as any);
-    return order;
+    return this.supabaseService.createOrder(order);
   }
 
   async findAll(): Promise<OrderResult[]> {
-    const persisted = await this.supabaseService?.listOrders();
-    if (persisted && persisted.length > 0) {
-      return persisted;
-    }
-
-    return this.orders;
+    return this.supabaseService.listOrders();
   }
 }

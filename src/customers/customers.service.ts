@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SupabaseService } from '../common/supabase.service';
+import { CustomerRecord, SupabaseService } from '../common/supabase.service';
 
 export interface CreateCustomerDto {
   name: string;
@@ -8,19 +8,11 @@ export interface CreateCustomerDto {
   deliveryMethod: 'pickup' | 'home';
 }
 
-export interface CustomerEntity {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-  deliveryMethod: 'pickup' | 'home';
-}
+export type CustomerEntity = CustomerRecord;
 
 @Injectable()
 export class CustomersService {
-  private readonly items: CustomerEntity[] = [];
-
-  constructor(private readonly supabaseService?: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async create(dto: CreateCustomerDto): Promise<CustomerEntity> {
     const entity: CustomerEntity = {
@@ -31,18 +23,14 @@ export class CustomersService {
       deliveryMethod: dto.deliveryMethod,
     };
 
-    this.items.push(entity);
-    await this.supabaseService?.createCustomer(entity);
+    return this.supabaseService.createCustomer(entity);
+  }
 
-    return entity;
+  async findById(id: string): Promise<CustomerEntity | null> {
+    return this.supabaseService.findCustomerById(id);
   }
 
   async findAll(): Promise<CustomerEntity[]> {
-    const persisted = await this.supabaseService?.listCustomers();
-    if (persisted && persisted.length > 0) {
-      return persisted;
-    }
-
-    return this.items;
+    return this.supabaseService.listCustomers();
   }
 }

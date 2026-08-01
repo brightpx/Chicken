@@ -1,8 +1,10 @@
+import { SupabaseService } from '../common/supabase.service';
 import { ChickenTypesService } from './chicken-types.service';
 
 describe('ChickenTypesService', () => {
   it('creates and lists chicken types', async () => {
-    const service = new ChickenTypesService();
+    const supabaseService = new SupabaseService();
+    const service = new ChickenTypesService(supabaseService);
 
     const created = await service.create({
       name: 'ไก่ตัวผู้',
@@ -20,8 +22,9 @@ describe('ChickenTypesService', () => {
     expect(created.cookingPrice).toBe(40);
   });
 
-  it('accepts an injected Supabase service without breaking fallback behavior', async () => {
-    const service = new ChickenTypesService({ getClient: () => null } as any);
+  it('persists through SupabaseService as single source of truth', async () => {
+    const supabaseService = new SupabaseService();
+    const service = new ChickenTypesService(supabaseService);
 
     const created = await service.create({
       name: 'ไก่จัมโบ้',

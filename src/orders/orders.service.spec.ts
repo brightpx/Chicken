@@ -1,12 +1,14 @@
+import { SupabaseService } from '../common/supabase.service';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrdersService } from './orders.service';
 
 describe('OrdersService', () => {
   it('calculates total amount for an order with multiple items', async () => {
-    const chickenTypesService = new ChickenTypesService();
-    const customersService = new CustomersService();
-    const service = new OrdersService(chickenTypesService, customersService);
+    const supabaseService = new SupabaseService();
+    const chickenTypesService = new ChickenTypesService(supabaseService);
+    const customersService = new CustomersService(supabaseService);
+    const service = new OrdersService(chickenTypesService, customersService, supabaseService);
 
     const customer = await customersService.create({
       name: 'Alice',

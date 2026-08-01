@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
 
-interface ChickenTypeRecord {
+export interface ChickenTypeRecord {
   id: string;
   name: string;
   unitWeightKg: number;
@@ -13,7 +13,7 @@ interface ChickenTypeRecord {
   cookingPrice: number;
 }
 
-interface CustomerRecord {
+export interface CustomerRecord {
   id: string;
   name: string;
   phone: string;
@@ -21,7 +21,7 @@ interface CustomerRecord {
   deliveryMethod: 'pickup' | 'home';
 }
 
-interface OrderItemRecord {
+export interface OrderItemRecord {
   chickenTypeId: string;
   quantity: number;
   unitPrice: number;
@@ -30,8 +30,8 @@ interface OrderItemRecord {
   cookingPrice: number;
 }
 
-interface OrderRecord {
-  id?: string;
+export interface OrderRecord {
+  id: string;
   customerId: string;
   deliveryMethod: 'pickup' | 'home';
   deliveryLocation: string;
@@ -98,22 +98,31 @@ export class SupabaseService {
     return entity;
   }
 
+  async findChickenTypeById(id: string): Promise<ChickenTypeRecord | null> {
+    if (this.client) {
+      const { data, error } = await this.client
+        .from('chicken_types')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) {
+        this.logger.warn(`Chicken type lookup failed: ${error.message}`);
+      } else if (data) {
+        return this.mapChickenType(data);
+      }
+    }
+
+    return this.memoryChickenTypes.find((item) => item.id === id) ?? null;
+  }
+
   async listChickenTypes(): Promise<ChickenTypeRecord[]> {
     if (this.client) {
       const { data, error } = await this.client.from('chicken_types').select('*');
       if (error) {
         this.logger.warn(`Chicken type fetch failed: ${error.message}`);
       } else if (data) {
-        return data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          unitWeightKg: item.unit_weight_kg,
-          pricePerKg: item.price_per_kg,
-          averagePrice: item.average_price,
-          isActive: item.is_active,
-          preparationType: item.preparation_type ?? 'fresh',
-          cookingPrice: item.cooking_price ?? 0,
-        }));
+        return data.map((item: any) => this.mapChickenType(item));
       }
     }
 
@@ -141,19 +150,31 @@ export class SupabaseService {
     return entity;
   }
 
+  async findCustomerById(id: string): Promise<CustomerRecord | null> {
+    if (this.client) {
+      const { data, error } = await this.client
+        .from('customers')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) {
+        this.logger.warn(`Customer lookup failed: ${error.message}`);
+      } else if (data) {
+        return this.mapCustomer(data);
+      }
+    }
+
+    return this.memoryCustomers.find((item) => item.id === id) ?? null;
+  }
+
   async listCustomers(): Promise<CustomerRecord[]> {
     if (this.client) {
       const { data, error } = await this.client.from('customers').select('*');
       if (error) {
         this.logger.warn(`Customer fetch failed: ${error.message}`);
       } else if (data) {
-        return data.map((item: any) => ({
-          id: item.id,
-          name: item.name,
-          phone: item.phone,
-          address: item.address,
-          deliveryMethod: item.delivery_method,
-        }));
+        return data.map((item: any) => this.mapCustomer(item));
       }
     }
 
@@ -161,27 +182,32 @@ export class SupabaseService {
   }
 
   async createOrder(entity: OrderRecord): Promise<OrderRecord> {
+    const order: OrderRecord = {
+      ...entity,
+      id: entity.id || `order-${Date.now()}`,
+    };
+
     if (this.client) {
       const { error } = await this.client.from('orders').insert({
-        id: entity.id ?? `order-${Date.now()}`,
-        customer_id: entity.customerId,
-        delivery_method: entity.deliveryMethod,
-        delivery_location: entity.deliveryLocation,
-        payment_status: entity.paymentStatus,
-        delivery_status: entity.deliveryStatus,
-        items: entity.items,
-        total_amount: entity.totalAmount,
+        id: order.id,
+        customer_id: order.customerId,
+        delivery_method: order.deliveryMethod,
+        delivery_location: order.deliveryLocation,
+        payment_status: order.paymentStatus,
+        delivery_status: order.deliveryStatus,
+        items: order.items,
+        total_amount: order.totalAmount,
       });
 
       if (error) {
         this.logger.warn(`Order insert failed: ${error.message}`);
       } else {
-        return entity;
+        return order;
       }
     }
 
-    this.memoryOrders.push(entity);
-    return entity;
+    this.memoryOrders.push(order);
+    return order;
   }
 
   async listOrders(): Promise<OrderRecord[]> {
@@ -190,20 +216,47 @@ export class SupabaseService {
       if (error) {
         this.logger.warn(`Order fetch failed: ${error.message}`);
       } else if (data) {
-        return data.map((item: any) => ({
-          id: item.id,
-          customerId: item.customer_id,
-          deliveryMethod: item.delivery_method,
-          deliveryLocation: item.delivery_location,
-          paymentStatus: item.payment_status,
-          deliveryStatus: item.delivery_status,
-          items: item.items,
-          totalAmount: item.total_amount,
-        }));
+        return data.map((item: any) => this.mapOrder(item));
       }
     }
 
     return this.memoryOrders;
+  }
+
+  private mapChickenType(item: any): ChickenTypeRecord {
+    return {
+      id: item.id,
+      name: item.name,
+      unitWeightKg: item.unit_weight_kg,
+      pricePerKg: item.price_per_kg,
+      averagePrice: item.average_price,
+      isActive: item.is_active,
+      preparationType: item.preparation_type ?? 'fresh',
+      cookingPrice: item.cooking_price ?? 0,
+    };
+  }
+
+  private mapCustomer(item: any): CustomerRecord {
+    return {
+      id: item.id,
+      name: item.name,
+      phone: item.phone,
+      address: item.address,
+      deliveryMethod: item.delivery_method,
+    };
+  }
+
+  private mapOrder(item: any): OrderRecord {
+    return {
+      id: item.id,
+      customerId: item.customer_id,
+      deliveryMethod: item.delivery_method,
+      deliveryLocation: item.delivery_location,
+      paymentStatus: item.payment_status,
+      deliveryStatus: item.delivery_status,
+      items: item.items,
+      totalAmount: item.total_amount,
+    };
   }
 
   private async initializeSchema() {

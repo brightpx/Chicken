@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { SupabaseService } from '../common/supabase.service';
+import { ChickenTypeRecord, SupabaseService } from '../common/supabase.service';
 
 export interface CreateChickenTypeDto {
   name: string;
@@ -10,22 +10,11 @@ export interface CreateChickenTypeDto {
   cookingPrice?: number;
 }
 
-export interface ChickenTypeEntity {
-  id: string;
-  name: string;
-  unitWeightKg: number;
-  pricePerKg: number;
-  averagePrice: number;
-  isActive: boolean;
-  preparationType: 'fresh' | 'boiled';
-  cookingPrice: number;
-}
+export type ChickenTypeEntity = ChickenTypeRecord;
 
 @Injectable()
 export class ChickenTypesService {
-  private readonly items: ChickenTypeEntity[] = [];
-
-  constructor(private readonly supabaseService?: SupabaseService) {}
+  constructor(private readonly supabaseService: SupabaseService) {}
 
   async create(dto: CreateChickenTypeDto): Promise<ChickenTypeEntity> {
     const entity: ChickenTypeEntity = {
@@ -39,18 +28,10 @@ export class ChickenTypesService {
       cookingPrice: dto.cookingPrice ?? 0,
     };
 
-    this.items.push(entity);
-    await this.supabaseService?.createChickenType(entity);
-
-    return entity;
+    return this.supabaseService.createChickenType(entity);
   }
 
   async findAll(): Promise<ChickenTypeEntity[]> {
-    const persisted = await this.supabaseService?.listChickenTypes();
-    if (persisted && persisted.length > 0) {
-      return persisted;
-    }
-
-    return this.items;
+    return this.supabaseService.listChickenTypes();
   }
 }
