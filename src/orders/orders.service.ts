@@ -16,6 +16,8 @@ export interface CreateOrderInput {
   deliveryLocation: string;
   paymentStatus: 'pending' | 'paid' | 'partial';
   deliveryStatus: 'pending' | 'delivered' | 'cancelled';
+  preparationType?: 'fresh' | 'boiled';
+  cookingPrice?: number;
   items: CreateOrderItemInput[];
 }
 
@@ -38,12 +40,14 @@ export class OrdersService {
 
     const chickenTypes = await this.chickenTypesService.findAll();
 
+    const preparationType = input.preparationType ?? 'fresh';
+    const cookingPrice = preparationType === 'boiled' ? (input.cookingPrice ?? getDefaultCookingPrice() ?? 30) : 0;
+
     const items = input.items.map((item) => {
       const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
-      const preparationType = item.preparationType ?? chicken?.preparationType ?? 'fresh';
-      const cookingPrice =
-        preparationType === 'boiled' ? (chicken?.cookingPrice ?? getDefaultCookingPrice()) : 0;
-      const unitPrice = (chicken?.averagePrice ?? 0) + cookingPrice;
+      const itemPreparationType = item.preparationType ?? preparationType;
+      const itemCookingPrice = itemPreparationType === 'boiled' ? cookingPrice : 0;
+      const unitPrice = (chicken?.averagePrice ?? 0) + itemCookingPrice;
       const totalPrice = unitPrice * item.quantity;
 
       return {
@@ -51,8 +55,8 @@ export class OrdersService {
         quantity: item.quantity,
         unitPrice,
         totalPrice,
-        preparationType,
-        cookingPrice,
+        preparationType: itemPreparationType,
+        cookingPrice: itemCookingPrice,
       };
     });
 

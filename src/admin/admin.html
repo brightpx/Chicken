@@ -168,11 +168,7 @@
 
         chickenList.innerHTML = chickenTypes.map((item) => `
           <div class="item">
-            <div>
-              <strong>${item.name}</strong> · น้ำหนัก ${item.unitWeightKg} กก<br/>
-              <small>รูปแบบ: <strong>${item.preparationType === 'boiled' ? 'ต้ม' : 'สด'}</strong></small>
-            </div>
-            <div class="actions">
+             <div class="actions">
               <button type="button" class="secondary" onclick="editChickenType('${item.id}')">แก้ไข</button>
             </div>
           </div>

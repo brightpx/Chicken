@@ -38,6 +38,8 @@ export interface OrderRecord {
   deliveryLocation: string;
   paymentStatus: 'pending' | 'paid' | 'partial';
   deliveryStatus: 'pending' | 'delivered' | 'cancelled';
+  preparationType?: 'fresh' | 'boiled';
+  cookingPrice?: number;
   items: OrderItemRecord[];
   totalAmount: number;
 }
