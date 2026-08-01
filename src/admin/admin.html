@@ -274,6 +274,18 @@
 
       window.editChickenType = editChickenType;
 
+      function applyCookingPriceForSelection(row) {
+        const preparationSelect = row.querySelector('select[name="preparationType"]');
+        const cookingPriceInput = row.querySelector('input[name="cookingPrice"]');
+        if (!preparationSelect || !cookingPriceInput) {
+          return;
+        }
+
+        const isBoiled = preparationSelect.value === 'boiled';
+        cookingPriceInput.value = isBoiled ? String(defaultCookingPrice || 30) : '0';
+        updateItemRowSummary(row);
+      }
+
       function updateOrderTotalSummary() {
         const rows = itemsContainer.querySelectorAll('.row');
         const total = Array.from(rows).reduce((sum, row) => {
@@ -319,7 +331,7 @@
 
       function bindItemRowEvents(row) {
         row.querySelector('select[name="chickenTypeId"]')?.addEventListener('change', () => updateItemRowSummary(row));
-        row.querySelector('select[name="preparationType"]')?.addEventListener('change', () => updateItemRowSummary(row));
+        row.querySelector('select[name="preparationType"]')?.addEventListener('change', () => applyCookingPriceForSelection(row));
         row.querySelector('input[name="cookingPrice"]')?.addEventListener('input', () => updateItemRowSummary(row));
         row.querySelector('input[name="quantity"]')?.addEventListener('input', () => updateItemRowSummary(row));
       }
@@ -340,13 +352,13 @@
               <option value="boiled">ต้ม</option>
             </select>
           </label>
-          <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="${defaultCookingPrice || 30}" /></label>
+          <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="0" /></label>
           <label>ลบรายการ<button type="button" class="secondary" onclick="this.parentElement.parentElement.remove()">ลบ</button></label>
           <div class="item-summary" style="grid-column: 1 / -1; color: #8a4d12; font-size: 0.9rem;">กำลังคำนวณ...</div>
         `;
         itemsContainer.appendChild(wrapper);
         bindItemRowEvents(wrapper);
-        updateItemRowSummary(wrapper);
+        applyCookingPriceForSelection(wrapper);
       }
 
       function refreshItemRowOptions() {
