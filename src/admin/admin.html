@@ -43,6 +43,15 @@
             <label>น้ำหนัก/กิโลกรัม<input name="unitWeightKg" type="number" step="0.1" required /></label>
             <label>ราคา (บาท)<input name="price" type="number" step="0.01" required /></label>
           </div>
+          <div class="row">
+            <label>รูปแบบการเตรียม
+              <select name="preparationType">
+                <option value="fresh">สด</option>
+                <option value="boiled">ต้ม</option>
+              </select>
+            </label>
+            <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="0" /></label>
+          </div>
           <div class="actions">
             <button type="submit">บันทึกประเภทไก่</button>
           </div>

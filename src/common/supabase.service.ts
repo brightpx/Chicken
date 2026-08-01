@@ -9,6 +9,8 @@ interface ChickenTypeRecord {
   pricePerKg: number;
   averagePrice: number;
   isActive: boolean;
+  preparationType: 'fresh' | 'boiled';
+  cookingPrice: number;
 }
 
 interface CustomerRecord {
@@ -24,6 +26,8 @@ interface OrderItemRecord {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  preparationType: 'fresh' | 'boiled';
+  cookingPrice: number;
 }
 
 interface OrderRecord {
@@ -79,6 +83,8 @@ export class SupabaseService {
         price_per_kg: entity.pricePerKg,
         average_price: entity.averagePrice,
         is_active: entity.isActive,
+        preparation_type: entity.preparationType,
+        cooking_price: entity.cookingPrice,
       });
 
       if (error) {
@@ -105,6 +111,8 @@ export class SupabaseService {
           pricePerKg: item.price_per_kg,
           averagePrice: item.average_price,
           isActive: item.is_active,
+          preparationType: item.preparation_type ?? 'fresh',
+          cookingPrice: item.cooking_price ?? 0,
         }));
       }
     }
@@ -210,7 +218,9 @@ export class SupabaseService {
         unit_weight_kg double precision not null,
         price_per_kg double precision not null,
         average_price double precision not null,
-        is_active boolean default true
+        is_active boolean default true,
+        preparation_type text default 'fresh',
+        cooking_price double precision default 0
       );
 
       create table if not exists customers (

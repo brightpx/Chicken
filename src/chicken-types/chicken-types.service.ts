@@ -6,6 +6,8 @@ export interface CreateChickenTypeDto {
   unitWeightKg: number;
   pricePerKg: number;
   averagePrice: number;
+  preparationType?: 'fresh' | 'boiled';
+  cookingPrice?: number;
 }
 
 export interface ChickenTypeEntity {
@@ -15,6 +17,8 @@ export interface ChickenTypeEntity {
   pricePerKg: number;
   averagePrice: number;
   isActive: boolean;
+  preparationType: 'fresh' | 'boiled';
+  cookingPrice: number;
 }
 
 @Injectable()
@@ -31,6 +35,8 @@ export class ChickenTypesService {
       pricePerKg: dto.pricePerKg,
       averagePrice: dto.averagePrice,
       isActive: true,
+      preparationType: dto.preparationType ?? 'fresh',
+      cookingPrice: dto.cookingPrice ?? 0,
     };
 
     this.items.push(entity);

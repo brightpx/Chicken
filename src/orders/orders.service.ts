@@ -6,6 +6,7 @@ import { SupabaseService } from '../common/supabase.service';
 export interface CreateOrderItemInput {
   chickenTypeId: string;
   quantity: number;
+  preparationType?: 'fresh' | 'boiled';
 }
 
 export interface CreateOrderInput {
@@ -22,6 +23,8 @@ export interface OrderItemResult {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  preparationType: 'fresh' | 'boiled';
+  cookingPrice: number;
 }
 
 export interface OrderResult {
@@ -54,7 +57,9 @@ export class OrdersService {
 
     const items = input.items.map((item) => {
       const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
-      const unitPrice = chicken?.averagePrice ?? 0;
+      const preparationType = item.preparationType ?? chicken?.preparationType ?? 'fresh';
+      const cookingPrice = preparationType === 'boiled' ? (chicken?.cookingPrice ?? 0) : 0;
+      const unitPrice = (chicken?.averagePrice ?? 0) + cookingPrice;
       const totalPrice = unitPrice * item.quantity;
 
       return {
@@ -62,6 +67,8 @@ export class OrdersService {
         quantity: item.quantity,
         unitPrice,
         totalPrice,
+        preparationType,
+        cookingPrice,
       };
     });
 
