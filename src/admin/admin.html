@@ -7,7 +7,7 @@
     <style>
       body { font-family: Arial, sans-serif; margin: 0; background: #fffaf2; color: #333; }
       .shell { max-width: 1100px; margin: 0 auto; padding: 24px; }
-      .card { background: white; border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 6px 18px rgba(0,0,0,0.07); }
+      .card { background: white; border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.08); border: 1px solid #f3e2c8; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
       .metric { font-size: 1.4rem; font-weight: bold; color: #d9534f; }
       form { display: grid; gap: 0.8rem; }
@@ -18,11 +18,17 @@
       button.secondary { background: #f5b041; }
       .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #fce8d4; color: #8a4d12; font-size: 0.8rem; }
       .list { display: grid; gap: 0.5rem; }
-      .item { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0.8rem; border: 1px solid #f0e0ce; border-radius: 8px; }
+      .item { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0.8rem; border: 1px solid #f0e0ce; border-radius: 10px; background: #fffdfa; }
       .status { margin-top: 0.5rem; color: #0a7f3e; font-weight: 600; }
       .error { color: #c0392b; }
-      pre { background: #f8f8f8; padding: 1rem; border-radius: 8px; overflow: auto; }
+      pre { background: #fcfaf6; padding: 1rem; border-radius: 10px; overflow: auto; border: 1px solid #f0e0ce; }
       .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+      .table-wrap { overflow-x: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+      th, td { padding: 0.75rem 0.6rem; border-bottom: 1px solid #f0e0ce; text-align: left; vertical-align: top; }
+      th { background: #fff5e8; color: #8a4d12; font-weight: 700; }
+      tbody tr:hover { background: #fffdfa; }
+      .empty { color: #8a4d12; padding: 0.8rem 0; }
     </style>
   </head>
   <body>
@@ -33,6 +39,27 @@
         <div class="card"><strong>ประเภทไก่</strong><div class="metric" id="chickenTypes">-</div></div>
         <div class="card"><strong>คำสั่งซื้อ</strong><div class="metric" id="orders">-</div></div>
         <div class="card"><strong>รายได้</strong><div class="metric" id="revenue">-</div></div>
+      </div>
+
+      <div class="card">
+        <h3>คำสั่งซื้อล่าสุด</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>คำสั่งซื้อ</th>
+                <th>ลูกค้า</th>
+                <th>วิธีจัดส่ง</th>
+                <th>สถานะชำระ</th>
+                <th>สถานะจัดส่ง</th>
+                <th>รวมเงิน</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody">
+              <tr><td colspan="6" class="empty">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div class="card">
@@ -105,10 +132,6 @@
         <div class="list" id="chickenList"></div>
       </div>
 
-      <div class="card">
-        <h3>คำสั่งซื้อล่าสุด</h3>
-        <pre id="ordersJson">กำลังโหลด...</pre>
-      </div>
     </div>
 
     <script>
@@ -147,7 +170,7 @@
           <div class="item">
             <div>
               <strong>${item.name}</strong> · น้ำหนัก ${item.unitWeightKg} กก<br/>
-              <small>รูปแบบ: <strong>${item.preparationType === 'boiled' ? 'ต้ม' : 'สด'}</strong> · ค่าเพิ่มการต้ม ${item.cookingPrice ?? 0} บาท</small>
+              <small>รูปแบบ: <strong>${item.preparationType === 'boiled' ? 'ต้ม' : 'สด'}</strong></small>
             </div>
             <div class="actions">
               <button type="button" class="secondary" onclick="editChickenType('${item.id}')">แก้ไข</button>
@@ -200,6 +223,20 @@
         itemsContainer.appendChild(wrapper);
       }
 
+      function refreshItemRowOptions() {
+        const rows = itemsContainer.querySelectorAll('.row');
+        rows.forEach((row) => {
+          const select = row.querySelector('select[name="chickenTypeId"]');
+          if (!select) {
+            return;
+          }
+
+          select.innerHTML = chickenTypes.length
+            ? chickenTypes.map((item) => `<option value="${item.id}">${item.name} · ${item.averagePrice.toLocaleString()} บาท</option>`).join('')
+            : '<option value="">ยังไม่มีประเภทไก่</option>';
+        });
+      }
+
       async function loadDashboard() {
         const res = await fetch('/admin/dashboard?ts=' + Date.now());
         const data = await res.json();
@@ -208,7 +245,29 @@
         document.getElementById('chickenTypes').textContent = data.totalChickenTypes;
         document.getElementById('orders').textContent = data.totalOrders;
         document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
-        document.getElementById('ordersJson').textContent = JSON.stringify(data.orders, null, 2);
+
+        const tableBody = document.getElementById('ordersTableBody');
+        if (!Array.isArray(data.orders) || !data.orders.length) {
+          tableBody.innerHTML = '<tr><td colspan="6" class="empty">ยังไม่มีคำสั่งซื้อ</td></tr>';
+          return;
+        }
+
+        tableBody.innerHTML = data.orders.map((order) => {
+          const customer = order.customer || {};
+          const items = Array.isArray(order.items) ? order.items : [];
+          const itemsText = items.map((item) => `${item.quantity ?? 0} x ${item.chickenTypeName ?? 'ไก่'}`).join(', ');
+          return `
+            <tr>
+              <td><strong>${order.id ?? '-'}</strong><br/><small>${itemsText || '-'}</small></td>
+              <td>${customer.name ?? '-'}</td>
+              <td>${order.deliveryMethod === 'home' ? 'จัดส่งบ้าน' : 'รับที่ร้าน'}</td>
+              <td>${order.paymentStatus === 'paid' ? 'ชำระแล้ว' : order.paymentStatus === 'partial' ? 'บางส่วน' : 'รอดำเนินการ'}</td>
+              <td>${order.deliveryStatus === 'delivered' ? 'จัดส่งแล้ว' : order.deliveryStatus === 'cancelled' ? 'ยกเลิก' : 'รอดำเนินการ'}</td>
+              <td>${Number(order.totalAmount ?? 0).toLocaleString()} บาท</td>
+            </tr>
+          `;
+        }).join('');
+
         defaultCookingPrice = Number(data.defaultCookingPrice ?? 30);
         applyDefaultCookingPrice();
       }
@@ -219,6 +278,8 @@
         renderChickenTypes();
         if (!itemsContainer.querySelector('select')) {
           addItemRow();
+        } else {
+          refreshItemRowOptions();
         }
       }
 
