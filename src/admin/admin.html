@@ -50,7 +50,7 @@
                 <option value="boiled">ต้ม</option>
               </select>
             </label>
-            <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="0" /></label>
+            <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" /></label>
           </div>
           <div class="actions">
             <button type="submit">บันทึกประเภทไก่</button>
@@ -121,6 +121,14 @@
       const itemsContainer = document.getElementById('itemsContainer');
       const addItemBtn = document.getElementById('addItemBtn');
       let chickenTypes = [];
+      let defaultCookingPrice = 0;
+
+      function applyDefaultCookingPrice() {
+        const input = chickenForm.querySelector('input[name="cookingPrice"]');
+        if (input) {
+          input.value = defaultCookingPrice;
+        }
+      }
 
       function setStatus(element, message, isError = false) {
         element.textContent = message;
@@ -165,6 +173,8 @@
         document.getElementById('orders').textContent = data.totalOrders;
         document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
         document.getElementById('ordersJson').textContent = JSON.stringify(data.orders, null, 2);
+        defaultCookingPrice = Number(data.defaultCookingPrice ?? 0);
+        applyDefaultCookingPrice();
       }
 
       async function loadChickenTypes() {
@@ -184,6 +194,8 @@
           unitWeightKg: Number(formData.get('unitWeightKg')),
           pricePerKg: Number(formData.get('price')),
           averagePrice: Number(formData.get('price')),
+          preparationType: formData.get('preparationType'),
+          cookingPrice: Number(formData.get('cookingPrice')),
         };
 
         setStatus(chickenStatus, 'กำลังบันทึก...');
@@ -200,6 +212,7 @@
         }
 
         chickenForm.reset();
+        applyDefaultCookingPrice();
         setStatus(chickenStatus, 'บันทึกประเภทไก่เรียบร้อย');
         await loadChickenTypes();
         await loadDashboard();

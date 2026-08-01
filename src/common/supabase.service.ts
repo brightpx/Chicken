@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Pool } from 'pg';
+import { getDefaultCookingPrice } from './app-config';
 
 export interface ChickenTypeRecord {
   id: string;
@@ -232,7 +233,7 @@ export class SupabaseService {
       averagePrice: item.average_price,
       isActive: item.is_active,
       preparationType: item.preparation_type ?? 'fresh',
-      cookingPrice: item.cooking_price ?? 0,
+      cookingPrice: item.cooking_price ?? getDefaultCookingPrice(),
     };
   }
 

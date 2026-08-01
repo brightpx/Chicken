@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { getDefaultCookingPrice } from '../common/app-config';
 import { ChickenTypeRecord, SupabaseService } from '../common/supabase.service';
 
 export interface CreateChickenTypeDto {
@@ -25,7 +26,7 @@ export class ChickenTypesService {
       averagePrice: dto.averagePrice,
       isActive: true,
       preparationType: dto.preparationType ?? 'fresh',
-      cookingPrice: dto.cookingPrice ?? 0,
+      cookingPrice: dto.cookingPrice ?? getDefaultCookingPrice(),
     };
 
     return this.supabaseService.createChickenType(entity);

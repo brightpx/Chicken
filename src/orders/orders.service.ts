@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { getDefaultCookingPrice } from '../common/app-config';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrderItemRecord, OrderRecord, SupabaseService } from '../common/supabase.service';
@@ -40,7 +41,8 @@ export class OrdersService {
     const items = input.items.map((item) => {
       const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
       const preparationType = item.preparationType ?? chicken?.preparationType ?? 'fresh';
-      const cookingPrice = preparationType === 'boiled' ? (chicken?.cookingPrice ?? 0) : 0;
+      const cookingPrice =
+        preparationType === 'boiled' ? (chicken?.cookingPrice ?? getDefaultCookingPrice()) : 0;
       const unitPrice = (chicken?.averagePrice ?? 0) + cookingPrice;
       const totalPrice = unitPrice * item.quantity;
 

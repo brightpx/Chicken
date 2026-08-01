@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { getDefaultCookingPrice } from '../common/app-config';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrdersService } from '../orders/orders.service';
@@ -32,6 +33,7 @@ export class AdminController {
       totalChickenTypes: chickenTypes.length,
       totalOrders: orders.length,
       totalRevenue,
+      defaultCookingPrice: getDefaultCookingPrice(),
       orders: enrichedOrders,
     };
   }
