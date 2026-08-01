@@ -46,7 +46,8 @@ let AdminController = class AdminController {
                 })
                 : [],
         }));
-        const totalRevenue = enrichedOrders.reduce((sum, order) => {
+        const totalRevenue = enrichedOrders.reduce((sum, order) => sum + Number(order.totalAmount ?? 0), 0);
+        const paidRevenue = enrichedOrders.reduce((sum, order) => {
             if (order.paymentStatus !== 'paid') {
                 return sum;
             }
@@ -57,6 +58,7 @@ let AdminController = class AdminController {
             totalChickenTypes: chickenTypes.length,
             totalOrders: orders.length,
             totalRevenue,
+            paidRevenue,
             defaultCookingPrice: (0, app_config_1.getDefaultCookingPrice)(),
             orders: enrichedOrders,
         };

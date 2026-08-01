@@ -38,7 +38,8 @@
         <div class="card"><strong>ลูกค้า</strong><div class="metric" id="customers">-</div></div>
         <div class="card"><strong>ประเภทไก่</strong><div class="metric" id="chickenTypes">-</div></div>
         <div class="card"><strong>คำสั่งซื้อ</strong><div class="metric" id="orders">-</div></div>
-        <div class="card"><strong>รายได้ (จ่ายแล้ว)</strong><div class="metric" id="revenue">-</div></div>
+        <div class="card"><strong>รายได้</strong><div class="metric" id="revenue">-</div></div>
+        <div class="card"><strong>รายได้ (จ่ายแล้ว)</strong><div class="metric" id="paidRevenue">-</div></div>
       </div>
 
       <div class="card">
@@ -228,7 +229,7 @@
         editingOrderId = id;
         orderSubmitBtn.textContent = 'อัปเดตคำสั่งซื้อ';
         cancelOrderEditBtn.style.display = 'inline-block';
-        setStatus(orderStatus, 'กำลังแก้ไขคำสั่งซื้อ');
+        setStatus(orderStatus, `กำลังแก้ไขคำสั่งซื้อ (Order ID: ${id})`);
         orderForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
@@ -410,7 +411,8 @@
         document.getElementById('customers').textContent = data.totalCustomers;
         document.getElementById('chickenTypes').textContent = data.totalChickenTypes;
         document.getElementById('orders').textContent = data.totalOrders;
-        document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
+        document.getElementById('revenue').textContent = Number(data.totalRevenue ?? 0).toLocaleString();
+        document.getElementById('paidRevenue').textContent = Number(data.paidRevenue ?? 0).toLocaleString();
 
         const tableBody = document.getElementById('ordersTableBody');
         dashboardOrders = Array.isArray(data.orders) ? data.orders.slice(0, 20) : [];

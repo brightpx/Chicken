@@ -37,7 +37,8 @@ export class AdminController {
         : [],
     }));
 
-    const totalRevenue = enrichedOrders.reduce((sum: number, order) => {
+    const totalRevenue = enrichedOrders.reduce((sum: number, order) => sum + Number(order.totalAmount ?? 0), 0);
+    const paidRevenue = enrichedOrders.reduce((sum: number, order) => {
       if (order.paymentStatus !== 'paid') {
         return sum;
       }
@@ -49,6 +50,7 @@ export class AdminController {
       totalChickenTypes: chickenTypes.length,
       totalOrders: orders.length,
       totalRevenue,
+      paidRevenue,
       defaultCookingPrice: getDefaultCookingPrice(),
       orders: enrichedOrders,
     };

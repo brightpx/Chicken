@@ -11,6 +11,7 @@ export declare class AdminController {
         totalChickenTypes: number;
         totalOrders: number;
         totalRevenue: number;
+        paidRevenue: number;
         defaultCookingPrice: number;
         orders: {
             customerName: string;
