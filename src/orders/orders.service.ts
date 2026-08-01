@@ -8,6 +8,7 @@ export interface CreateOrderItemInput {
   chickenTypeId: string;
   quantity: number;
   preparationType?: 'fresh' | 'boiled';
+  cookingPrice?: number;
 }
 
 export interface CreateOrderInput {
@@ -53,7 +54,7 @@ export class OrdersService {
     const items = input.items.map((item) => {
       const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
       const itemPreparationType = item.preparationType ?? preparationType;
-      const itemCookingPrice = itemPreparationType === 'boiled' ? cookingPrice : 0;
+      const itemCookingPrice = itemPreparationType === 'boiled' ? (item.cookingPrice ?? cookingPrice) : 0;
       const unitPrice = (chicken?.averagePrice ?? 0) + itemCookingPrice;
       const totalPrice = unitPrice * item.quantity;
 

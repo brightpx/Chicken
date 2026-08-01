@@ -5,6 +5,7 @@ export interface CreateOrderItemInput {
     chickenTypeId: string;
     quantity: number;
     preparationType?: 'fresh' | 'boiled';
+    cookingPrice?: number;
 }
 export interface CreateOrderInput {
     customerId: string;

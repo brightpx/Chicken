@@ -95,13 +95,6 @@
                 <option value="cancelled">ยกเลิก</option>
               </select>
             </label>
-            <label>รูปแบบการเตรียม
-              <select name="preparationType">
-                <option value="fresh">สด</option>
-                <option value="boiled">ต้ม</option>
-              </select>
-            </label>
-            <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" /></label>
           </div>
           <div id="itemsContainer"></div>
           <div class="actions">
@@ -280,6 +273,29 @@
 
       window.editChickenType = editChickenType;
 
+      function updateItemRowSummary(row) {
+        const select = row.querySelector('select[name="chickenTypeId"]');
+        const preparationSelect = row.querySelector('select[name="preparationType"]');
+        const cookingPriceInput = row.querySelector('input[name="cookingPrice"]');
+        const summary = row.querySelector('.item-summary');
+        const selectedType = chickenTypes.find((item) => item.id === select?.value);
+        const basePrice = Number(selectedType?.averagePrice ?? 0);
+        const isBoiled = preparationSelect?.value === 'boiled';
+        const cookingPrice = Number(cookingPriceInput?.value || 0);
+        const totalPrice = basePrice + (isBoiled ? cookingPrice : 0);
+        if (summary) {
+          summary.textContent = isBoiled
+            ? `ราคา ${totalPrice.toLocaleString()} บาท (พื้นฐาน ${basePrice.toLocaleString()} บาท + ค่าต้ม ${cookingPrice.toLocaleString()} บาท)`
+            : `ราคา ${totalPrice.toLocaleString()} บาท`;
+        }
+      }
+
+      function bindItemRowEvents(row) {
+        row.querySelector('select[name="chickenTypeId"]')?.addEventListener('change', () => updateItemRowSummary(row));
+        row.querySelector('select[name="preparationType"]')?.addEventListener('change', () => updateItemRowSummary(row));
+        row.querySelector('input[name="cookingPrice"]')?.addEventListener('input', () => updateItemRowSummary(row));
+      }
+
       function addItemRow() {
         const wrapper = document.createElement('div');
         wrapper.className = 'row';
@@ -290,9 +306,19 @@
             </select>
           </label>
           <label>จำนวน<input name="quantity" type="number" min="1" value="1" required /></label>
+          <label>รูปแบบการเตรียม
+            <select name="preparationType">
+              <option value="fresh">สด</option>
+              <option value="boiled">ต้ม</option>
+            </select>
+          </label>
+          <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="${defaultCookingPrice || 30}" /></label>
           <label>ลบรายการ<button type="button" class="secondary" onclick="this.parentElement.parentElement.remove()">ลบ</button></label>
+          <div class="item-summary" style="grid-column: 1 / -1; color: #8a4d12; font-size: 0.9rem;">กำลังคำนวณ...</div>
         `;
         itemsContainer.appendChild(wrapper);
+        bindItemRowEvents(wrapper);
+        updateItemRowSummary(wrapper);
       }
 
       function refreshItemRowOptions() {
@@ -306,6 +332,7 @@
           select.innerHTML = chickenTypes.length
             ? chickenTypes.map((item) => `<option value="${item.id}">${item.name} · ${item.averagePrice.toLocaleString()} บาท</option>`).join('')
             : '<option value="">ยังไม่มีประเภทไก่</option>';
+          updateItemRowSummary(row);
         });
       }
 
@@ -405,7 +432,6 @@
       orderForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(orderForm);
-        const preparationType = formData.get('preparationType');
 
         if (editingOrderId) {
           setStatus(orderStatus, 'กำลังอัปเดตคำสั่งซื้อ...');
@@ -444,9 +470,13 @@
         const items = Array.from(itemsContainer.querySelectorAll('.row')).map((row) => {
           const select = row.querySelector('select[name="chickenTypeId"]');
           const quantityInput = row.querySelector('input[name="quantity"]');
+          const preparationSelect = row.querySelector('select[name="preparationType"]');
+          const cookingPriceInput = row.querySelector('input[name="cookingPrice"]');
           return {
             chickenTypeId: select.value,
             quantity: Number(quantityInput.value),
+            preparationType: preparationSelect?.value === 'boiled' ? 'boiled' : 'fresh',
+            cookingPrice: Number(cookingPriceInput?.value || 0),
           };
         });
 
@@ -475,8 +505,6 @@
           deliveryLocation: formData.get('deliveryLocation'),
           paymentStatus: formData.get('paymentStatus'),
           deliveryStatus: formData.get('deliveryStatus'),
-          preparationType,
-          cookingPrice: preparationType === 'boiled' ? Number(formData.get('cookingPrice') || defaultCookingPrice || 30) : 0,
           items,
         };
 
