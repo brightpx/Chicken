@@ -1,4 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 import { AppService } from './app.service';
 import { GroqService } from './groq/groq.service';
 
@@ -12,6 +15,23 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Get('admin-page')
+  getAdminPage(@Res() res: Response) {
+    const candidates = [
+      path.join(process.cwd(), 'src', 'admin', 'admin.html'),
+      path.join(process.cwd(), 'dist', 'admin', 'admin.html'),
+      path.join(__dirname, 'admin', 'admin.html'),
+    ];
+
+    const filePath = candidates.find((candidate) => fs.existsSync(candidate));
+    if (filePath) {
+      res.sendFile(filePath);
+      return;
+    }
+
+    res.status(404).send('Admin page not found');
   }
 
   @Get('ai/groq')

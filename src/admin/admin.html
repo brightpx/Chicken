@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chicken Shop Admin</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 2rem; background: #fffaf2; color: #333; }
+      .card { background: white; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+      .metric { font-size: 1.4rem; font-weight: bold; color: #d9534f; }
+      pre { background: #f8f8f8; padding: 1rem; border-radius: 8px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1>Chicken Shop Admin Dashboard</h1>
+    <div class="grid">
+      <div class="card"><strong>Total Customers</strong><div class="metric" id="customers">-</div></div>
+      <div class="card"><strong>Total Chicken Types</strong><div class="metric" id="chickenTypes">-</div></div>
+      <div class="card"><strong>Total Orders</strong><div class="metric" id="orders">-</div></div>
+      <div class="card"><strong>Total Revenue</strong><div class="metric" id="revenue">-</div></div>
+    </div>
+    <div class="card">
+      <h3>Latest Orders</h3>
+      <pre id="ordersJson">Loading...</pre>
+    </div>
+    <script>
+      fetch('/admin/dashboard')
+        .then((res) => res.json())
+        .then((data) => {
+          document.getElementById('customers').textContent = data.totalCustomers;
+          document.getElementById('chickenTypes').textContent = data.totalChickenTypes;
+          document.getElementById('orders').textContent = data.totalOrders;
+          document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
+          document.getElementById('ordersJson').textContent = JSON.stringify(data.orders, null, 2);
+        })
+        .catch((err) => {
+          document.getElementById('ordersJson').textContent = 'Unable to load dashboard: ' + err.message;
+        });
+    </script>
+  </body>
+</html>

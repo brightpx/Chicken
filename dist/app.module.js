@@ -12,12 +12,25 @@ const config_1 = require("@nestjs/config");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const groq_module_1 = require("./groq/groq.module");
+const chicken_types_module_1 = require("./chicken-types/chicken-types.module");
+const customers_module_1 = require("./customers/customers.module");
+const orders_module_1 = require("./orders/orders.module");
+const supabase_module_1 = require("./common/supabase.module");
+const admin_module_1 = require("./admin/admin.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [config_1.ConfigModule.forRoot({ isGlobal: true }), groq_module_1.GroqModule],
+        imports: [
+            config_1.ConfigModule.forRoot({ isGlobal: true }),
+            groq_module_1.GroqModule,
+            chicken_types_module_1.ChickenTypesModule,
+            customers_module_1.CustomersModule,
+            orders_module_1.OrdersModule,
+            supabase_module_1.SupabaseModule,
+            admin_module_1.AdminModule,
+        ],
         controllers: [app_controller_1.AppController],
         providers: [app_service_1.AppService],
     })
