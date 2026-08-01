@@ -36,31 +36,6 @@
       </div>
 
       <div class="card">
-        <h3>เพิ่มประเภทไก่และราคา</h3>
-        <form id="chickenForm">
-          <div class="row">
-            <label>ชื่อประเภทไก่<input name="name" required /></label>
-            <label>น้ำหนัก/กิโลกรัม<input name="unitWeightKg" type="number" step="0.1" required /></label>
-            <label>ราคา (บาท)<input name="price" type="number" step="0.01" required /></label>
-          </div>
-          <div class="row">
-            <label>รูปแบบการเตรียม
-              <select name="preparationType">
-                <option value="fresh">สด</option>
-                <option value="boiled">ต้ม</option>
-              </select>
-            </label>
-            <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" /></label>
-          </div>
-          <div class="actions">
-            <button type="submit" id="chickenSubmitBtn">บันทึกประเภทไก่</button>
-            <button type="button" class="secondary" id="cancelEditBtn" style="display:none;">ยกเลิก</button>
-          </div>
-        </form>
-        <div class="status" id="chickenStatus"></div>
-      </div>
-
-      <div class="card">
         <h3>เพิ่มคำสั่งซื้อใหม่</h3>
         <form id="orderForm">
           <div class="row">
@@ -92,6 +67,13 @@
                 <option value="cancelled">ยกเลิก</option>
               </select>
             </label>
+            <label>รูปแบบการเตรียม
+              <select name="preparationType">
+                <option value="fresh">สด</option>
+                <option value="boiled">ต้ม</option>
+              </select>
+            </label>
+            <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" /></label>
           </div>
           <div id="itemsContainer"></div>
           <div class="actions">
@@ -100,6 +82,22 @@
           </div>
         </form>
         <div class="status" id="orderStatus"></div>
+      </div>
+
+      <div class="card">
+        <h3>เพิ่มประเภทไก่และราคา</h3>
+        <form id="chickenForm">
+          <div class="row">
+            <label>ชื่อประเภทไก่<input name="name" required /></label>
+            <label>น้ำหนัก/กิโลกรัม<input name="unitWeightKg" type="number" step="0.1" required /></label>
+            <label>ราคา (บาท)<input name="price" type="number" step="0.01" required /></label>
+          </div>
+          <div class="actions">
+            <button type="submit" id="chickenSubmitBtn">บันทึกประเภทไก่</button>
+            <button type="button" class="secondary" id="cancelEditBtn" style="display:none;">ยกเลิก</button>
+          </div>
+        </form>
+        <div class="status" id="chickenStatus"></div>
       </div>
 
       <div class="card">
@@ -126,8 +124,8 @@
       let editingChickenTypeId = null;
 
       function applyDefaultCookingPrice() {
-        const input = chickenForm.querySelector('input[name="cookingPrice"]');
-        const preparationTypeSelect = chickenForm.querySelector('select[name="preparationType"]');
+        const input = orderForm.querySelector('input[name="cookingPrice"]');
+        const preparationTypeSelect = orderForm.querySelector('select[name="preparationType"]');
         if (input && preparationTypeSelect) {
           const isBoiled = preparationTypeSelect.value === 'boiled';
           input.value = isBoiled ? (defaultCookingPrice || 30) : 0;
@@ -163,7 +161,6 @@
         editingChickenTypeId = null;
         document.getElementById('chickenSubmitBtn').textContent = 'บันทึกประเภทไก่';
         document.getElementById('cancelEditBtn').style.display = 'none';
-        applyDefaultCookingPrice();
       }
 
       function editChickenType(id) {
@@ -176,16 +173,9 @@
         const nameInput = chickenForm.querySelector('input[name="name"]');
         const unitWeightInput = chickenForm.querySelector('input[name="unitWeightKg"]');
         const priceInput = chickenForm.querySelector('input[name="price"]');
-        const preparationSelect = chickenForm.querySelector('select[name="preparationType"]');
-        const cookingInput = chickenForm.querySelector('input[name="cookingPrice"]');
-
         if (nameInput) nameInput.value = item.name;
         if (unitWeightInput) unitWeightInput.value = item.unitWeightKg;
         if (priceInput) priceInput.value = item.averagePrice;
-        if (preparationSelect) preparationSelect.value = item.preparationType ?? 'fresh';
-        if (cookingInput) {
-          cookingInput.value = item.preparationType === 'boiled' ? (item.cookingPrice ?? defaultCookingPrice ?? 30) : 0;
-        }
 
         document.getElementById('chickenSubmitBtn').textContent = 'อัปเดตประเภทไก่';
         document.getElementById('cancelEditBtn').style.display = 'inline-block';
@@ -232,20 +222,17 @@
         }
       }
 
-      chickenForm.querySelector('select[name="preparationType"]').addEventListener('change', applyDefaultCookingPrice);
+      orderForm.querySelector('select[name="preparationType"]').addEventListener('change', applyDefaultCookingPrice);
       document.getElementById('cancelEditBtn').addEventListener('click', resetChickenForm);
 
       chickenForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(chickenForm);
-        const preparationType = formData.get('preparationType');
         const payload = {
           name: formData.get('name'),
           unitWeightKg: Number(formData.get('unitWeightKg')),
           pricePerKg: Number(formData.get('price')),
           averagePrice: Number(formData.get('price')),
-          preparationType,
-          cookingPrice: preparationType === 'boiled' ? Number(formData.get('cookingPrice') || defaultCookingPrice || 30) : 0,
         };
 
         setStatus(chickenStatus, editingChickenTypeId ? 'กำลังอัปเดต...' : 'กำลังบันทึก...');
@@ -272,6 +259,7 @@
       orderForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const formData = new FormData(orderForm);
+        const preparationType = formData.get('preparationType');
         const customerPayload = {
           name: formData.get('customerName'),
           phone: formData.get('phone'),
@@ -313,6 +301,8 @@
           deliveryLocation: formData.get('deliveryLocation'),
           paymentStatus: formData.get('paymentStatus'),
           deliveryStatus: formData.get('deliveryStatus'),
+          preparationType,
+          cookingPrice: preparationType === 'boiled' ? Number(formData.get('cookingPrice') || defaultCookingPrice || 30) : 0,
           items,
         };
 

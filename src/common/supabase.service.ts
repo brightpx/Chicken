@@ -312,6 +312,14 @@ export class SupabaseService {
         if not exists (
           select 1
           from information_schema.columns
+          where table_name = 'chicken_types' and column_name = 'preparation_type'
+        ) then
+          alter table chicken_types add column preparation_type text default 'fresh';
+        end if;
+
+        if not exists (
+          select 1
+          from information_schema.columns
           where table_name = 'chicken_types' and column_name = 'cooking_price'
         ) then
           alter table chicken_types add column cooking_price double precision default 0;
