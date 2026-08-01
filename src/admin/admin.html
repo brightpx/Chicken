@@ -97,6 +97,7 @@
             </label>
           </div>
           <div id="itemsContainer"></div>
+          <div style="margin-top: 0.5rem; font-weight: 700; color: #8a4d12;" id="orderTotalSummary">ราคารวมทั้งออเดอร์: 0 บาท</div>
           <div class="actions">
             <button type="button" class="secondary" id="addItemBtn">เพิ่มรายการไก่</button>
             <button type="submit" id="orderSubmitBtn">บันทึกคำสั่งซื้อ</button>
@@ -167,7 +168,7 @@
         setStatus(orderStatus, '');
         itemsContainer.innerHTML = '';
         addItemRow();
-        applyDefaultCookingPrice();
+        updateOrderTotalSummary();
       }
 
       function editOrder(id) {
@@ -273,27 +274,54 @@
 
       window.editChickenType = editChickenType;
 
+      function updateOrderTotalSummary() {
+        const rows = itemsContainer.querySelectorAll('.row');
+        const total = Array.from(rows).reduce((sum, row) => {
+          const select = row.querySelector('select[name="chickenTypeId"]');
+          const quantityInput = row.querySelector('input[name="quantity"]');
+          const preparationSelect = row.querySelector('select[name="preparationType"]');
+          const cookingPriceInput = row.querySelector('input[name="cookingPrice"]');
+          const selectedType = chickenTypes.find((item) => item.id === select?.value);
+          const basePrice = Number(selectedType?.averagePrice ?? 0);
+          const isBoiled = preparationSelect?.value === 'boiled';
+          const cookingPrice = Number(cookingPriceInput?.value || 0);
+          const unitPrice = basePrice + (isBoiled ? cookingPrice : 0);
+          const quantity = Number(quantityInput?.value || 0);
+          return sum + unitPrice * quantity;
+        }, 0);
+
+        const totalElement = document.getElementById('orderTotalSummary');
+        if (totalElement) {
+          totalElement.textContent = `ราคารวมทั้งออเดอร์: ${total.toLocaleString()} บาท`;
+        }
+      }
+
       function updateItemRowSummary(row) {
         const select = row.querySelector('select[name="chickenTypeId"]');
         const preparationSelect = row.querySelector('select[name="preparationType"]');
         const cookingPriceInput = row.querySelector('input[name="cookingPrice"]');
+        const quantityInput = row.querySelector('input[name="quantity"]');
         const summary = row.querySelector('.item-summary');
         const selectedType = chickenTypes.find((item) => item.id === select?.value);
         const basePrice = Number(selectedType?.averagePrice ?? 0);
         const isBoiled = preparationSelect?.value === 'boiled';
         const cookingPrice = Number(cookingPriceInput?.value || 0);
-        const totalPrice = basePrice + (isBoiled ? cookingPrice : 0);
+        const quantity = Number(quantityInput?.value || 0);
+        const unitPrice = basePrice + (isBoiled ? cookingPrice : 0);
+        const totalPrice = unitPrice * quantity;
         if (summary) {
           summary.textContent = isBoiled
-            ? `ราคา ${totalPrice.toLocaleString()} บาท (พื้นฐาน ${basePrice.toLocaleString()} บาท + ค่าต้ม ${cookingPrice.toLocaleString()} บาท)`
-            : `ราคา ${totalPrice.toLocaleString()} บาท`;
+            ? `ราคา ${totalPrice.toLocaleString()} บาท (${quantity} x ${unitPrice.toLocaleString()} บาท รวมค่าต้ม)`
+            : `ราคา ${totalPrice.toLocaleString()} บาท (${quantity} x ${unitPrice.toLocaleString()} บาท)`;
         }
+        updateOrderTotalSummary();
       }
 
       function bindItemRowEvents(row) {
         row.querySelector('select[name="chickenTypeId"]')?.addEventListener('change', () => updateItemRowSummary(row));
         row.querySelector('select[name="preparationType"]')?.addEventListener('change', () => updateItemRowSummary(row));
         row.querySelector('input[name="cookingPrice"]')?.addEventListener('input', () => updateItemRowSummary(row));
+        row.querySelector('input[name="quantity"]')?.addEventListener('input', () => updateItemRowSummary(row));
       }
 
       function addItemRow() {
@@ -395,7 +423,6 @@
         }
       }
 
-      orderForm.querySelector('select[name="preparationType"]').addEventListener('change', applyDefaultCookingPrice);
       document.getElementById('cancelEditBtn').addEventListener('click', resetChickenForm);
 
       chickenForm.addEventListener('submit', async (event) => {
@@ -533,7 +560,11 @@
         setStatus(chickenStatus, 'โหลดประเภทไก่ไม่สำเร็จ', true);
       });
       loadDashboard().catch(() => {
-        document.getElementById('ordersJson').textContent = 'โหลดข้อมูลไม่สำเร็จ';
+        const tableBody = document.getElementById('ordersTableBody');
+        if (tableBody) {
+          tableBody.innerHTML = '<tr><td colspan="7" class="empty">โหลดข้อมูลไม่สำเร็จ</td></tr>';
+        }
+        setStatus(orderStatus, 'โหลดข้อมูลแดชบอร์ดไม่สำเร็จ', true);
       });
     </script>
   </body>
