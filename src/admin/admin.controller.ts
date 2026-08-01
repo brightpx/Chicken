@@ -37,7 +37,12 @@ export class AdminController {
         : [],
     }));
 
-    const totalRevenue = enrichedOrders.reduce((sum: number, order) => sum + order.totalAmount, 0);
+    const totalRevenue = enrichedOrders.reduce((sum: number, order) => {
+      if (order.paymentStatus !== 'paid') {
+        return sum;
+      }
+      return sum + Number(order.totalAmount ?? 0);
+    }, 0);
 
     return {
       totalCustomers: customers.length,

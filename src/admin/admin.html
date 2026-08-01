@@ -6,7 +6,7 @@
     <title>ผู้ดูแลร้านไก่</title>
     <style>
       body { font-family: Arial, sans-serif; margin: 0; background: #fffaf2; color: #333; }
-      .shell { max-width: 1100px; margin: 0 auto; padding: 24px; }
+      .shell { max-width: 1400px; margin: 0 auto; padding: 24px; }
       .card { background: white; border-radius: 16px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 8px 24px rgba(0,0,0,0.08); border: 1px solid #f3e2c8; }
       .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
       .metric { font-size: 1.4rem; font-weight: bold; color: #d9534f; }
@@ -24,7 +24,7 @@
       pre { background: #fcfaf6; padding: 1rem; border-radius: 10px; overflow: auto; border: 1px solid #f0e0ce; }
       .actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
       .table-wrap { overflow-x: auto; }
-      table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+      table { width: 100%; min-width: 1100px; border-collapse: collapse; font-size: 0.95rem; }
       th, td { padding: 0.75rem 0.6rem; border-bottom: 1px solid #f0e0ce; text-align: left; vertical-align: top; }
       th { background: #fff5e8; color: #8a4d12; font-weight: 700; }
       tbody tr:hover { background: #fffdfa; }
@@ -38,11 +38,11 @@
         <div class="card"><strong>ลูกค้า</strong><div class="metric" id="customers">-</div></div>
         <div class="card"><strong>ประเภทไก่</strong><div class="metric" id="chickenTypes">-</div></div>
         <div class="card"><strong>คำสั่งซื้อ</strong><div class="metric" id="orders">-</div></div>
-        <div class="card"><strong>รายได้</strong><div class="metric" id="revenue">-</div></div>
+        <div class="card"><strong>รายได้ (จ่ายแล้ว)</strong><div class="metric" id="revenue">-</div></div>
       </div>
 
       <div class="card">
-        <h3>คำสั่งซื้อล่าสุด</h3>
+        <h3>คำสั่งซื้อล่าสุด (20 รายการ)</h3>
         <div class="table-wrap">
           <table>
             <thead>
@@ -185,8 +185,6 @@
         const deliveryLocationInput = orderForm.querySelector('input[name="deliveryLocation"]');
         const paymentStatusSelect = orderForm.querySelector('select[name="paymentStatus"]');
         const deliveryStatusSelect = orderForm.querySelector('select[name="deliveryStatus"]');
-        const preparationTypeSelect = orderForm.querySelector('select[name="preparationType"]');
-        const cookingPriceInput = orderForm.querySelector('input[name="cookingPrice"]');
 
         if (customerNameInput) customerNameInput.value = customer.name || order.customerName || '';
         if (phoneInput) phoneInput.value = customer.phone || '';
@@ -195,8 +193,37 @@
         if (deliveryLocationInput) deliveryLocationInput.value = order.deliveryLocation || '';
         if (paymentStatusSelect) paymentStatusSelect.value = order.paymentStatus || 'pending';
         if (deliveryStatusSelect) deliveryStatusSelect.value = order.deliveryStatus || 'pending';
-        if (preparationTypeSelect) preparationTypeSelect.value = order.preparationType || 'fresh';
-        if (cookingPriceInput) cookingPriceInput.value = order.cookingPrice ?? defaultCookingPrice;
+
+        itemsContainer.innerHTML = '';
+        const items = Array.isArray(order.items) ? order.items : [];
+        if (!items.length) {
+          addItemRow();
+        } else {
+          items.forEach((item) => {
+            const row = document.createElement('div');
+            row.className = 'row';
+            row.innerHTML = `
+              <label>ประเภทไก่
+                <select name="chickenTypeId" required>
+                  ${chickenTypes.map((entry) => `<option value="${entry.id}" ${entry.id === item.chickenTypeId ? 'selected' : ''}>${entry.name} · ${entry.averagePrice.toLocaleString()} บาท</option>`).join('')}
+                </select>
+              </label>
+              <label>จำนวน<input name="quantity" type="number" min="1" value="${item.quantity ?? 1}" required /></label>
+              <label>รูปแบบการเตรียม
+                <select name="preparationType">
+                  <option value="fresh" ${item.preparationType === 'fresh' ? 'selected' : ''}>สด</option>
+                  <option value="boiled" ${item.preparationType === 'boiled' ? 'selected' : ''}>ต้ม</option>
+                </select>
+              </label>
+              <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="${item.cookingPrice ?? 0}" /></label>
+              <label>ลบรายการ<button type="button" class="secondary" onclick="this.parentElement.parentElement.remove()">ลบ</button></label>
+              <div class="item-summary" style="grid-column: 1 / -1; color: #8a4d12; font-size: 0.9rem;">กำลังคำนวณ...</div>
+            `;
+            itemsContainer.appendChild(row);
+            bindItemRowEvents(row);
+            updateItemRowSummary(row);
+          });
+        }
 
         editingOrderId = id;
         orderSubmitBtn.textContent = 'อัปเดตคำสั่งซื้อ';
@@ -386,7 +413,7 @@
         document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
 
         const tableBody = document.getElementById('ordersTableBody');
-        dashboardOrders = Array.isArray(data.orders) ? data.orders : [];
+        dashboardOrders = Array.isArray(data.orders) ? data.orders.slice(0, 20) : [];
         if (!dashboardOrders.length) {
           tableBody.innerHTML = '<tr><td colspan="7" class="empty">ยังไม่มีคำสั่งซื้อ</td></tr>';
           return;
