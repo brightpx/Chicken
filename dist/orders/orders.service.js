@@ -11,34 +11,44 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrdersService = void 0;
 const common_1 = require("@nestjs/common");
+const app_config_1 = require("../common/app-config");
 const chicken_types_service_1 = require("../chicken-types/chicken-types.service");
 const customers_service_1 = require("../customers/customers.service");
+const supabase_service_1 = require("../common/supabase.service");
 let OrdersService = class OrdersService {
     chickenTypesService;
     customersService;
-    orders = [];
-    constructor(chickenTypesService, customersService) {
+    supabaseService;
+    constructor(chickenTypesService, customersService, supabaseService) {
         this.chickenTypesService = chickenTypesService;
         this.customersService = customersService;
+        this.supabaseService = supabaseService;
     }
     async create(input) {
-        const customer = (await this.customersService.findAll()).find((item) => item.id === input.customerId);
+        const customer = await this.customersService.findById(input.customerId);
         if (!customer) {
-            throw new Error('Customer not found');
+            throw new common_1.NotFoundException('Customer not found');
         }
         const chickenTypes = await this.chickenTypesService.findAll();
+        const preparationType = input.preparationType ?? 'fresh';
+        const cookingPrice = preparationType === 'boiled' ? (input.cookingPrice ?? (0, app_config_1.getDefaultCookingPrice)() ?? 30) : 0;
         const items = input.items.map((item) => {
             const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
-            const unitPrice = chicken?.averagePrice ?? 0;
+            const itemPreparationType = item.preparationType ?? preparationType;
+            const itemCookingPrice = itemPreparationType === 'boiled' ? cookingPrice : 0;
+            const unitPrice = (chicken?.averagePrice ?? 0) + itemCookingPrice;
             const totalPrice = unitPrice * item.quantity;
             return {
                 chickenTypeId: item.chickenTypeId,
                 quantity: item.quantity,
                 unitPrice,
                 totalPrice,
+                preparationType: itemPreparationType,
+                cookingPrice: itemCookingPrice,
             };
         });
         const order = {
+            id: `order-${Date.now()}`,
             customerId: input.customerId,
             deliveryMethod: input.deliveryMethod,
             deliveryLocation: input.deliveryLocation,
@@ -47,17 +57,20 @@ let OrdersService = class OrdersService {
             items,
             totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
         };
-        this.orders.push(order);
-        return order;
+        return this.supabaseService.createOrder(order);
     }
     async findAll() {
-        return this.orders;
+        return this.supabaseService.listOrders();
+    }
+    async update(id, input) {
+        return this.supabaseService.updateOrder(id, input);
     }
 };
 exports.OrdersService = OrdersService;
 exports.OrdersService = OrdersService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [chicken_types_service_1.ChickenTypesService,
-        customers_service_1.CustomersService])
+        customers_service_1.CustomersService,
+        supabase_service_1.SupabaseService])
 ], OrdersService);
 //# sourceMappingURL=orders.service.js.map

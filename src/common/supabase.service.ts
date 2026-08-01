@@ -256,6 +256,33 @@ export class SupabaseService {
     return this.memoryOrders;
   }
 
+  async updateOrder(id: string, dto: Partial<OrderRecord>): Promise<OrderRecord | null> {
+    const existing = this.memoryOrders.find((item) => item.id === id);
+    if (existing) {
+      const updated = { ...existing, ...dto };
+      this.memoryOrders.splice(this.memoryOrders.indexOf(existing), 1, updated);
+      return updated;
+    }
+
+    if (this.client) {
+      const updatePayload: Record<string, unknown> = {};
+      if (dto.paymentStatus !== undefined) updatePayload.payment_status = dto.paymentStatus;
+      if (dto.deliveryStatus !== undefined) updatePayload.delivery_status = dto.deliveryStatus;
+      if (dto.deliveryMethod !== undefined) updatePayload.delivery_method = dto.deliveryMethod;
+      if (dto.deliveryLocation !== undefined) updatePayload.delivery_location = dto.deliveryLocation;
+
+      const { data, error } = await this.client.from('orders').update(updatePayload).eq('id', id).select('*').maybeSingle();
+      if (error) {
+        this.logger.warn(`Order update failed: ${error.message}`);
+        return null;
+      }
+
+      return data ? this.mapOrder(data) : null;
+    }
+
+    return null;
+  }
+
   private mapChickenType(item: any): ChickenTypeRecord {
     return {
       id: item.id,

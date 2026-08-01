@@ -11,10 +11,10 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChickenTypesService = void 0;
 const common_1 = require("@nestjs/common");
+const app_config_1 = require("../common/app-config");
 const supabase_service_1 = require("../common/supabase.service");
 let ChickenTypesService = class ChickenTypesService {
     supabaseService;
-    items = [];
     constructor(supabaseService) {
         this.supabaseService = supabaseService;
     }
@@ -26,37 +26,16 @@ let ChickenTypesService = class ChickenTypesService {
             pricePerKg: dto.pricePerKg,
             averagePrice: dto.averagePrice,
             isActive: true,
+            preparationType: dto.preparationType ?? 'fresh',
+            cookingPrice: dto.cookingPrice ?? (0, app_config_1.getDefaultCookingPrice)(),
         };
-        this.items.push(entity);
-        const client = this.supabaseService?.getClient();
-        if (client) {
-            await client.from('chicken_types').insert({
-                id: entity.id,
-                name: entity.name,
-                unit_weight_kg: entity.unitWeightKg,
-                price_per_kg: entity.pricePerKg,
-                average_price: entity.averagePrice,
-                is_active: entity.isActive,
-            });
-        }
-        return entity;
+        return this.supabaseService.createChickenType(entity);
     }
     async findAll() {
-        const client = this.supabaseService?.getClient();
-        if (client) {
-            const { data } = await client.from('chicken_types').select('*');
-            if (data) {
-                return data.map((item) => ({
-                    id: item.id,
-                    name: item.name,
-                    unitWeightKg: item.unit_weight_kg,
-                    pricePerKg: item.price_per_kg,
-                    averagePrice: item.average_price,
-                    isActive: item.is_active,
-                }));
-            }
-        }
-        return this.items;
+        return this.supabaseService.listChickenTypes();
+    }
+    async update(id, dto) {
+        return this.supabaseService.updateChickenType(id, dto);
     }
 };
 exports.ChickenTypesService = ChickenTypesService;

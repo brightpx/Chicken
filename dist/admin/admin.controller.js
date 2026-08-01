@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AdminController = void 0;
 const common_1 = require("@nestjs/common");
+const app_config_1 = require("../common/app-config");
 const chicken_types_service_1 = require("../chicken-types/chicken-types.service");
 const customers_service_1 = require("../customers/customers.service");
 const orders_service_1 = require("../orders/orders.service");
@@ -29,13 +30,20 @@ let AdminController = class AdminController {
             this.chickenTypesService.findAll(),
             this.ordersService.findAll(),
         ]);
-        const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+        const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
+        const enrichedOrders = orders.map((order) => ({
+            ...order,
+            customerName: customerMap.get(order.customerId)?.name ?? order.customerId,
+            customer: customerMap.get(order.customerId) ?? null,
+        }));
+        const totalRevenue = enrichedOrders.reduce((sum, order) => sum + order.totalAmount, 0);
         return {
             totalCustomers: customers.length,
             totalChickenTypes: chickenTypes.length,
             totalOrders: orders.length,
             totalRevenue,
-            orders,
+            defaultCookingPrice: (0, app_config_1.getDefaultCookingPrice)(),
+            orders: enrichedOrders,
         };
     }
 };

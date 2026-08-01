@@ -21,6 +21,13 @@ export interface CreateOrderInput {
   items: CreateOrderItemInput[];
 }
 
+export interface UpdateOrderInput {
+  paymentStatus?: 'pending' | 'paid' | 'partial';
+  deliveryStatus?: 'pending' | 'delivered' | 'cancelled';
+  deliveryMethod?: 'pickup' | 'home';
+  deliveryLocation?: string;
+}
+
 export type OrderItemResult = OrderItemRecord;
 export type OrderResult = OrderRecord;
 
@@ -76,5 +83,9 @@ export class OrdersService {
 
   async findAll(): Promise<OrderResult[]> {
     return this.supabaseService.listOrders();
+  }
+
+  async update(id: string, input: UpdateOrderInput): Promise<OrderResult | null> {
+    return this.supabaseService.updateOrder(id, input);
   }
 }

@@ -11,6 +11,20 @@ export declare class AdminController {
         totalChickenTypes: number;
         totalOrders: number;
         totalRevenue: number;
-        orders: import("../orders/orders.service").OrderResult[];
+        defaultCookingPrice: number;
+        orders: {
+            customerName: string;
+            customer: import("../common/supabase.service").CustomerRecord | null;
+            id: string;
+            customerId: string;
+            deliveryMethod: "pickup" | "home";
+            deliveryLocation: string;
+            paymentStatus: "pending" | "paid" | "partial";
+            deliveryStatus: "pending" | "delivered" | "cancelled";
+            preparationType?: "fresh" | "boiled";
+            cookingPrice?: number;
+            items: import("../common/supabase.service").OrderItemRecord[];
+            totalAmount: number;
+        }[];
     }>;
 }

@@ -1,21 +1,15 @@
-import { SupabaseService } from '../common/supabase.service';
+import { CustomerRecord, SupabaseService } from '../common/supabase.service';
 export interface CreateCustomerDto {
     name: string;
     phone: string;
     address: string;
     deliveryMethod: 'pickup' | 'home';
 }
-export interface CustomerEntity {
-    id: string;
-    name: string;
-    phone: string;
-    address: string;
-    deliveryMethod: 'pickup' | 'home';
-}
+export type CustomerEntity = CustomerRecord;
 export declare class CustomersService {
-    private readonly supabaseService?;
-    private readonly items;
-    constructor(supabaseService?: SupabaseService | undefined);
+    private readonly supabaseService;
+    constructor(supabaseService: SupabaseService);
     create(dto: CreateCustomerDto): Promise<CustomerEntity>;
+    findById(id: string): Promise<CustomerEntity | null>;
     findAll(): Promise<CustomerEntity[]>;
 }

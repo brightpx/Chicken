@@ -14,7 +14,6 @@ const common_1 = require("@nestjs/common");
 const supabase_service_1 = require("../common/supabase.service");
 let CustomersService = class CustomersService {
     supabaseService;
-    items = [];
     constructor(supabaseService) {
         this.supabaseService = supabaseService;
     }
@@ -26,34 +25,13 @@ let CustomersService = class CustomersService {
             address: dto.address,
             deliveryMethod: dto.deliveryMethod,
         };
-        this.items.push(entity);
-        const client = this.supabaseService?.getClient();
-        if (client) {
-            await client.from('customers').insert({
-                id: entity.id,
-                name: entity.name,
-                phone: entity.phone,
-                address: entity.address,
-                delivery_method: entity.deliveryMethod,
-            });
-        }
-        return entity;
+        return this.supabaseService.createCustomer(entity);
+    }
+    async findById(id) {
+        return this.supabaseService.findCustomerById(id);
     }
     async findAll() {
-        const client = this.supabaseService?.getClient();
-        if (client) {
-            const { data } = await client.from('customers').select('*');
-            if (data) {
-                return data.map((item) => ({
-                    id: item.id,
-                    name: item.name,
-                    phone: item.phone,
-                    address: item.address,
-                    deliveryMethod: item.delivery_method,
-                }));
-            }
-        }
-        return this.items;
+        return this.supabaseService.listCustomers();
     }
 };
 exports.CustomersService = CustomersService;

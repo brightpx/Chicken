@@ -53,10 +53,11 @@
                 <th>สถานะชำระ</th>
                 <th>สถานะจัดส่ง</th>
                 <th>รวมเงิน</th>
+                <th>การดำเนินการ</th>
               </tr>
             </thead>
             <tbody id="ordersTableBody">
-              <tr><td colspan="6" class="empty">กำลังโหลด...</td></tr>
+              <tr><td colspan="7" class="empty">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -66,9 +67,9 @@
         <h3>เพิ่มคำสั่งซื้อใหม่</h3>
         <form id="orderForm">
           <div class="row">
-            <label>ชื่อลูกค้า<input name="customerName" required /></label>
-            <label>เบอร์โทร<input name="phone" required /></label>
-            <label>ที่อยู่<input name="address" required /></label>
+            <label>ชื่อลูกค้า<input name="customerName" /></label>
+            <label>เบอร์โทร<input name="phone" /></label>
+            <label>ที่อยู่<input name="address" /></label>
           </div>
           <div class="row">
             <label>วิธีจัดส่ง
@@ -77,7 +78,7 @@
                 <option value="home">จัดส่งบ้าน</option>
               </select>
             </label>
-            <label>สถานที่จัดส่ง<input name="deliveryLocation" required /></label>
+            <label>สถานที่จัดส่ง<input name="deliveryLocation" /></label>
             <label>สถานะชำระ
               <select name="paymentStatus">
                 <option value="pending">รอดำเนินการ</option>
@@ -105,7 +106,8 @@
           <div id="itemsContainer"></div>
           <div class="actions">
             <button type="button" class="secondary" id="addItemBtn">เพิ่มรายการไก่</button>
-            <button type="submit">บันทึกคำสั่งซื้อ</button>
+            <button type="submit" id="orderSubmitBtn">บันทึกคำสั่งซื้อ</button>
+            <button type="button" class="secondary" id="cancelOrderEditBtn" style="display:none;">ยกเลิก</button>
           </div>
         </form>
         <div class="status" id="orderStatus"></div>
@@ -142,9 +144,13 @@
       const chickenList = document.getElementById('chickenList');
       const itemsContainer = document.getElementById('itemsContainer');
       const addItemBtn = document.getElementById('addItemBtn');
+      const orderSubmitBtn = document.getElementById('orderSubmitBtn');
+      const cancelOrderEditBtn = document.getElementById('cancelOrderEditBtn');
       let chickenTypes = [];
       let defaultCookingPrice = 30;
       let editingChickenTypeId = null;
+      let editingOrderId = null;
+      let dashboardOrders = [];
 
       function applyDefaultCookingPrice() {
         const input = orderForm.querySelector('input[name="cookingPrice"]');
@@ -159,6 +165,72 @@
         element.textContent = message;
         element.className = isError ? 'status error' : 'status';
       }
+
+      function resetOrderForm() {
+        orderForm.reset();
+        editingOrderId = null;
+        orderSubmitBtn.textContent = 'บันทึกคำสั่งซื้อ';
+        cancelOrderEditBtn.style.display = 'none';
+        setStatus(orderStatus, '');
+        itemsContainer.innerHTML = '';
+        addItemRow();
+        applyDefaultCookingPrice();
+      }
+
+      function editOrder(id) {
+        const order = dashboardOrders.find((entry) => entry.id === id);
+        if (!order) {
+          return;
+        }
+
+        const customer = order.customer || {};
+        const customerNameInput = orderForm.querySelector('input[name="customerName"]');
+        const phoneInput = orderForm.querySelector('input[name="phone"]');
+        const addressInput = orderForm.querySelector('input[name="address"]');
+        const deliveryMethodSelect = orderForm.querySelector('select[name="deliveryMethod"]');
+        const deliveryLocationInput = orderForm.querySelector('input[name="deliveryLocation"]');
+        const paymentStatusSelect = orderForm.querySelector('select[name="paymentStatus"]');
+        const deliveryStatusSelect = orderForm.querySelector('select[name="deliveryStatus"]');
+        const preparationTypeSelect = orderForm.querySelector('select[name="preparationType"]');
+        const cookingPriceInput = orderForm.querySelector('input[name="cookingPrice"]');
+
+        if (customerNameInput) customerNameInput.value = customer.name || order.customerName || '';
+        if (phoneInput) phoneInput.value = customer.phone || '';
+        if (addressInput) addressInput.value = customer.address || '';
+        if (deliveryMethodSelect) deliveryMethodSelect.value = order.deliveryMethod || 'pickup';
+        if (deliveryLocationInput) deliveryLocationInput.value = order.deliveryLocation || '';
+        if (paymentStatusSelect) paymentStatusSelect.value = order.paymentStatus || 'pending';
+        if (deliveryStatusSelect) deliveryStatusSelect.value = order.deliveryStatus || 'pending';
+        if (preparationTypeSelect) preparationTypeSelect.value = order.preparationType || 'fresh';
+        if (cookingPriceInput) cookingPriceInput.value = order.cookingPrice ?? defaultCookingPrice;
+
+        editingOrderId = id;
+        orderSubmitBtn.textContent = 'อัปเดตคำสั่งซื้อ';
+        cancelOrderEditBtn.style.display = 'inline-block';
+        setStatus(orderStatus, 'กำลังแก้ไขคำสั่งซื้อ');
+        orderForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
+      async function markOrderPaid(id) {
+        setStatus(orderStatus, 'กำลังอัปเดตสถานะชำระ...');
+        const res = await fetch(`/orders/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paymentStatus: 'paid' }),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          setStatus(orderStatus, 'อัปเดตไม่สำเร็จ: ' + errorText, true);
+          return;
+        }
+
+        setStatus(orderStatus, 'อัปเดตสถานะชำระเรียบร้อย');
+        await loadDashboard();
+      }
+
+      window.editOrder = editOrder;
+      window.markOrderPaid = markOrderPaid;
 
       function renderChickenTypes() {
         if (!chickenTypes.length) {
@@ -243,12 +315,13 @@
         document.getElementById('revenue').textContent = data.totalRevenue.toLocaleString();
 
         const tableBody = document.getElementById('ordersTableBody');
-        if (!Array.isArray(data.orders) || !data.orders.length) {
-          tableBody.innerHTML = '<tr><td colspan="6" class="empty">ยังไม่มีคำสั่งซื้อ</td></tr>';
+        dashboardOrders = Array.isArray(data.orders) ? data.orders : [];
+        if (!dashboardOrders.length) {
+          tableBody.innerHTML = '<tr><td colspan="7" class="empty">ยังไม่มีคำสั่งซื้อ</td></tr>';
           return;
         }
 
-        tableBody.innerHTML = data.orders.map((order) => {
+        tableBody.innerHTML = dashboardOrders.map((order) => {
           const customer = order.customer || {};
           const items = Array.isArray(order.items) ? order.items : [];
           const itemsText = items.map((item) => `${item.quantity ?? 0} x ${item.chickenTypeName ?? 'ไก่'}`).join(', ');
@@ -260,6 +333,12 @@
               <td>${order.paymentStatus === 'paid' ? 'ชำระแล้ว' : order.paymentStatus === 'partial' ? 'บางส่วน' : 'รอดำเนินการ'}</td>
               <td>${order.deliveryStatus === 'delivered' ? 'จัดส่งแล้ว' : order.deliveryStatus === 'cancelled' ? 'ยกเลิก' : 'รอดำเนินการ'}</td>
               <td>${Number(order.totalAmount ?? 0).toLocaleString()} บาท</td>
+              <td>
+                <div class="actions">
+                  <button type="button" class="secondary" onclick="editOrder('${order.id}')">แก้ไข</button>
+                  <button type="button" onclick="markOrderPaid('${order.id}')">ชำระแล้ว</button>
+                </div>
+              </td>
             </tr>
           `;
         }).join('');
@@ -317,6 +396,34 @@
         event.preventDefault();
         const formData = new FormData(orderForm);
         const preparationType = formData.get('preparationType');
+
+        if (editingOrderId) {
+          setStatus(orderStatus, 'กำลังอัปเดตคำสั่งซื้อ...');
+          const updatePayload = {
+            deliveryMethod: formData.get('deliveryMethod'),
+            deliveryLocation: formData.get('deliveryLocation'),
+            paymentStatus: formData.get('paymentStatus'),
+            deliveryStatus: formData.get('deliveryStatus'),
+          };
+
+          const res = await fetch(`/orders/${editingOrderId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatePayload),
+          });
+
+          if (!res.ok) {
+            const errorText = await res.text();
+            setStatus(orderStatus, 'อัปเดตคำสั่งซื้อไม่สำเร็จ: ' + errorText, true);
+            return;
+          }
+
+          resetOrderForm();
+          setStatus(orderStatus, 'อัปเดตคำสั่งซื้อเรียบร้อย');
+          await loadDashboard();
+          return;
+        }
+
         const customerPayload = {
           name: formData.get('customerName'),
           phone: formData.get('phone'),
@@ -375,14 +482,13 @@
           return;
         }
 
-        orderForm.reset();
-        itemsContainer.innerHTML = '';
-        addItemRow();
+        resetOrderForm();
         setStatus(orderStatus, 'สร้างคำสั่งซื้อเรียบร้อย');
         await loadChickenTypes();
         await loadDashboard();
       });
 
+      cancelOrderEditBtn.addEventListener('click', resetOrderForm);
       addItemBtn.addEventListener('click', addItemRow);
       addItemRow();
       loadChickenTypes().catch(() => {

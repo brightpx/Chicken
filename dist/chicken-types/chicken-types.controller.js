@@ -26,6 +26,9 @@ let ChickenTypesController = class ChickenTypesController {
     findAll() {
         return this.chickenTypesService.findAll();
     }
+    update(id, dto) {
+        return this.chickenTypesService.update(id, dto);
+    }
 };
 exports.ChickenTypesController = ChickenTypesController;
 __decorate([
@@ -41,6 +44,14 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], ChickenTypesController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", void 0)
+], ChickenTypesController.prototype, "update", null);
 exports.ChickenTypesController = ChickenTypesController = __decorate([
     (0, common_1.Controller)('chicken-types'),
     __metadata("design:paramtypes", [chicken_types_service_1.ChickenTypesService])

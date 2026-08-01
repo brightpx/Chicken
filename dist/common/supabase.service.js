@@ -14,10 +14,14 @@ exports.SupabaseService = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_js_1 = require("@supabase/supabase-js");
 const pg_1 = require("pg");
+const app_config_1 = require("./app-config");
 let SupabaseService = SupabaseService_1 = class SupabaseService {
     logger = new common_1.Logger(SupabaseService_1.name);
     client = null;
     pool = null;
+    memoryChickenTypes = [];
+    memoryCustomers = [];
+    memoryOrders = [];
     constructor() {
         const url = process.env.SUPABASE_URL;
         const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -39,6 +43,232 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
     getClient() {
         return this.client;
     }
+    async createChickenType(entity) {
+        if (this.client) {
+            const { error } = await this.client.from('chicken_types').insert({
+                id: entity.id,
+                name: entity.name,
+                unit_weight_kg: entity.unitWeightKg,
+                price_per_kg: entity.pricePerKg,
+                average_price: entity.averagePrice,
+                is_active: entity.isActive,
+                preparation_type: entity.preparationType,
+                cooking_price: entity.cookingPrice,
+            });
+            if (error) {
+                this.logger.warn(`Chicken type insert failed: ${error.message}`);
+            }
+            else {
+                return entity;
+            }
+        }
+        this.memoryChickenTypes.push(entity);
+        return entity;
+    }
+    async findChickenTypeById(id) {
+        if (this.client) {
+            const { data, error } = await this.client
+                .from('chicken_types')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+            if (error) {
+                this.logger.warn(`Chicken type lookup failed: ${error.message}`);
+            }
+            else if (data) {
+                return this.mapChickenType(data);
+            }
+        }
+        return this.memoryChickenTypes.find((item) => item.id === id) ?? null;
+    }
+    async listChickenTypes() {
+        if (this.client) {
+            const { data, error } = await this.client.from('chicken_types').select('*');
+            if (error) {
+                this.logger.warn(`Chicken type fetch failed: ${error.message}`);
+            }
+            else if (data) {
+                return data.map((item) => this.mapChickenType(item));
+            }
+        }
+        return this.memoryChickenTypes;
+    }
+    async updateChickenType(id, dto) {
+        const existing = this.memoryChickenTypes.find((item) => item.id === id);
+        if (existing) {
+            const updated = { ...existing, ...dto };
+            this.memoryChickenTypes.splice(this.memoryChickenTypes.indexOf(existing), 1, updated);
+            return updated;
+        }
+        if (this.client) {
+            const updatePayload = {};
+            if (dto.name !== undefined)
+                updatePayload.name = dto.name;
+            if (dto.unitWeightKg !== undefined)
+                updatePayload.unit_weight_kg = dto.unitWeightKg;
+            if (dto.pricePerKg !== undefined)
+                updatePayload.price_per_kg = dto.pricePerKg;
+            if (dto.averagePrice !== undefined)
+                updatePayload.average_price = dto.averagePrice;
+            if (dto.isActive !== undefined)
+                updatePayload.is_active = dto.isActive;
+            if (dto.preparationType !== undefined)
+                updatePayload.preparation_type = dto.preparationType;
+            if (dto.cookingPrice !== undefined)
+                updatePayload.cooking_price = dto.cookingPrice;
+            const { data, error } = await this.client.from('chicken_types').update(updatePayload).eq('id', id).select('*').maybeSingle();
+            if (error) {
+                this.logger.warn(`Chicken type update failed: ${error.message}`);
+                return null;
+            }
+            return data ? this.mapChickenType(data) : null;
+        }
+        return null;
+    }
+    async createCustomer(entity) {
+        if (this.client) {
+            const { error } = await this.client.from('customers').insert({
+                id: entity.id,
+                name: entity.name,
+                phone: entity.phone,
+                address: entity.address,
+                delivery_method: entity.deliveryMethod,
+            });
+            if (error) {
+                this.logger.warn(`Customer insert failed: ${error.message}`);
+            }
+            else {
+                return entity;
+            }
+        }
+        this.memoryCustomers.push(entity);
+        return entity;
+    }
+    async findCustomerById(id) {
+        if (this.client) {
+            const { data, error } = await this.client
+                .from('customers')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+            if (error) {
+                this.logger.warn(`Customer lookup failed: ${error.message}`);
+            }
+            else if (data) {
+                return this.mapCustomer(data);
+            }
+        }
+        return this.memoryCustomers.find((item) => item.id === id) ?? null;
+    }
+    async listCustomers() {
+        if (this.client) {
+            const { data, error } = await this.client.from('customers').select('*');
+            if (error) {
+                this.logger.warn(`Customer fetch failed: ${error.message}`);
+            }
+            else if (data) {
+                return data.map((item) => this.mapCustomer(item));
+            }
+        }
+        return this.memoryCustomers;
+    }
+    async createOrder(entity) {
+        const order = {
+            ...entity,
+            id: entity.id || `order-${Date.now()}`,
+        };
+        if (this.client) {
+            const { error } = await this.client.from('orders').insert({
+                id: order.id,
+                customer_id: order.customerId,
+                delivery_method: order.deliveryMethod,
+                delivery_location: order.deliveryLocation,
+                payment_status: order.paymentStatus,
+                delivery_status: order.deliveryStatus,
+                items: order.items,
+                total_amount: order.totalAmount,
+            });
+            if (error) {
+                this.logger.warn(`Order insert failed: ${error.message}`);
+            }
+            else {
+                return order;
+            }
+        }
+        this.memoryOrders.push(order);
+        return order;
+    }
+    async listOrders() {
+        if (this.client) {
+            const { data, error } = await this.client.from('orders').select('*');
+            if (error) {
+                this.logger.warn(`Order fetch failed: ${error.message}`);
+            }
+            else if (data) {
+                return data.map((item) => this.mapOrder(item));
+            }
+        }
+        return this.memoryOrders;
+    }
+    async updateOrder(id, dto) {
+        const existing = this.memoryOrders.find((item) => item.id === id);
+        if (existing) {
+            const updated = { ...existing, ...dto };
+            this.memoryOrders.splice(this.memoryOrders.indexOf(existing), 1, updated);
+            return updated;
+        }
+        if (this.client) {
+            const updatePayload = {};
+            if (dto.paymentStatus !== undefined)
+                updatePayload.payment_status = dto.paymentStatus;
+            if (dto.deliveryStatus !== undefined)
+                updatePayload.delivery_status = dto.deliveryStatus;
+            if (dto.deliveryMethod !== undefined)
+                updatePayload.delivery_method = dto.deliveryMethod;
+            if (dto.deliveryLocation !== undefined)
+                updatePayload.delivery_location = dto.deliveryLocation;
+            const { data, error } = await this.client.from('orders').update(updatePayload).eq('id', id).select('*').maybeSingle();
+            if (error) {
+                this.logger.warn(`Order update failed: ${error.message}`);
+                return null;
+            }
+            return data ? this.mapOrder(data) : null;
+        }
+        return null;
+    }
+    mapChickenType(item) {
+        return {
+            id: item.id,
+            name: item.name,
+            unitWeightKg: item.unit_weight_kg,
+            pricePerKg: item.price_per_kg,
+            averagePrice: item.average_price,
+            isActive: item.is_active,
+            preparationType: item.preparation_type ?? 'fresh',
+            cookingPrice: item.cooking_price ?? (0, app_config_1.getDefaultCookingPrice)(),
+        };
+    }
+    mapCustomer(item) {
+        return {
+            id: item.id,
+            name: item.name,
+            phone: item.phone,
+            address: item.address,
+            deliveryMethod: item.delivery_method,
+        };
+    }
+    mapOrder(item) {
+        return {
+            id: item.id,
+            customerId: item.customer_id,
+            deliveryMethod: item.delivery_method,
+            deliveryLocation: item.delivery_location,
+            paymentStatus: item.payment_status,
+            deliveryStatus: item.delivery_status,
+            items: item.items,
+            totalAmount: item.total_amount,
+        };
+    }
     async initializeSchema() {
         if (!this.pool) {
             return;
@@ -50,8 +280,30 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         unit_weight_kg double precision not null,
         price_per_kg double precision not null,
         average_price double precision not null,
-        is_active boolean default true
+        is_active boolean default true,
+        preparation_type text default 'fresh',
+        cooking_price double precision default 0
       );
+
+      do $$
+      begin
+        if not exists (
+          select 1
+          from information_schema.columns
+          where table_name = 'chicken_types' and column_name = 'preparation_type'
+        ) then
+          alter table chicken_types add column preparation_type text default 'fresh';
+        end if;
+
+        if not exists (
+          select 1
+          from information_schema.columns
+          where table_name = 'chicken_types' and column_name = 'cooking_price'
+        ) then
+          alter table chicken_types add column cooking_price double precision default 0;
+        end if;
+      end
+      $$;
 
       create table if not exists customers (
         id text primary key,

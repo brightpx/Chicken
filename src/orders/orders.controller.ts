@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { CreateOrderInput, OrdersService } from './orders.service';
+import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { CreateOrderInput, OrdersService, UpdateOrderInput } from './orders.service';
 
 @Controller('orders')
 export class OrdersController {
@@ -13,5 +13,10 @@ export class OrdersController {
   @Get()
   findAll() {
     return this.ordersService.findAll();
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateOrderInput) {
+    return this.ordersService.update(id, dto);
   }
 }

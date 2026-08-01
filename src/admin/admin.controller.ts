@@ -20,10 +20,11 @@ export class AdminController {
       this.ordersService.findAll(),
     ]);
 
-    const customerMap = new Map(customers.map((customer) => [customer.id, customer.name]));
+    const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
     const enrichedOrders = orders.map((order) => ({
       ...order,
-      customerName: customerMap.get(order.customerId) ?? order.customerId,
+      customerName: customerMap.get(order.customerId)?.name ?? order.customerId,
+      customer: customerMap.get(order.customerId) ?? null,
     }));
 
     const totalRevenue = enrichedOrders.reduce((sum: number, order) => sum + order.totalAmount, 0);
