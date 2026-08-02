@@ -8,15 +8,21 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var __param = (this && this.__param) || function (paramIndex, decorator) {
+    return function (target, key) { decorator(target, key, paramIndex); }
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChickenTypesService = void 0;
 const common_1 = require("@nestjs/common");
 const app_config_1 = require("../common/app-config");
 const supabase_service_1 = require("../common/supabase.service");
+const orders_service_1 = require("../orders/orders.service");
 let ChickenTypesService = class ChickenTypesService {
     supabaseService;
-    constructor(supabaseService) {
+    ordersService;
+    constructor(supabaseService, ordersService) {
         this.supabaseService = supabaseService;
+        this.ordersService = ordersService;
     }
     async create(dto) {
         const entity = {
@@ -35,12 +41,19 @@ let ChickenTypesService = class ChickenTypesService {
         return this.supabaseService.listChickenTypes();
     }
     async update(id, dto) {
-        return this.supabaseService.updateChickenType(id, dto);
+        const existing = await this.supabaseService.findChickenTypeById(id);
+        const updated = await this.supabaseService.updateChickenType(id, dto);
+        if (updated && dto.averagePrice !== undefined && dto.averagePrice !== existing?.averagePrice) {
+            await this.ordersService.recalculatePricesForChickenType(id, updated.averagePrice);
+        }
+        return updated;
     }
 };
 exports.ChickenTypesService = ChickenTypesService;
 exports.ChickenTypesService = ChickenTypesService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [supabase_service_1.SupabaseService])
+    __param(1, (0, common_1.Inject)((0, common_1.forwardRef)(() => orders_service_1.OrdersService))),
+    __metadata("design:paramtypes", [supabase_service_1.SupabaseService,
+        orders_service_1.OrdersService])
 ], ChickenTypesService);
 //# sourceMappingURL=chicken-types.service.js.map

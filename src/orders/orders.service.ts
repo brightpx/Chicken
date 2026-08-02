@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { getDefaultCookingPrice } from '../common/app-config';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
@@ -41,6 +41,7 @@ export type OrderResult = OrderRecord;
 @Injectable()
 export class OrdersService {
   constructor(
+    @Inject(forwardRef(() => ChickenTypesService))
     private readonly chickenTypesService: ChickenTypesService,
     private readonly customersService: CustomersService,
     private readonly supabaseService: SupabaseService,
@@ -126,5 +127,34 @@ export class OrdersService {
     } satisfies Partial<OrderRecord>;
 
     return this.supabaseService.updateOrder(id, updatedOrder);
+  }
+
+  // Keeps existing orders' prices in sync when a chicken type's price is edited.
+  async recalculatePricesForChickenType(chickenTypeId: string, newAveragePrice: number): Promise<void> {
+    const orders = await this.supabaseService.listOrders();
+
+    const affectedOrders = orders.filter((order) =>
+      order.items.some((item) => item.chickenTypeId === chickenTypeId),
+    );
+
+    await Promise.all(
+      affectedOrders.map((order) => {
+        const updatedItems = order.items.map((item) => {
+          if (item.chickenTypeId !== chickenTypeId) {
+            return item;
+          }
+
+          const unitPrice = newAveragePrice + (item.cookingPrice ?? 0);
+          return {
+            ...item,
+            unitPrice,
+            totalPrice: unitPrice * item.quantity,
+          } satisfies OrderItemRecord;
+        });
+
+        const totalAmount = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+        return this.supabaseService.updateOrder(order.id, { items: updatedItems, totalAmount });
+      }),
+    );
   }
 }

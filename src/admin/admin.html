@@ -43,7 +43,10 @@
       </div>
 
       <div class="card">
-        <h3>คำสั่งซื้อล่าสุด (20 รายการ)</h3>
+        <h3>คำสั่งซื้อล่าสุด</h3>
+        <div class="row" style="margin-bottom: 0.6rem;">
+          <label>ค้นหา<input type="text" id="orderSearchInput" placeholder="ค้นหาด้วย Order ID, ชื่อลูกค้า, เบอร์โทร หรือชื่อไก่" /></label>
+        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -61,6 +64,13 @@
               <tr><td colspan="7" class="empty">กำลังโหลด...</td></tr>
             </tbody>
           </table>
+        </div>
+        <div class="actions" style="justify-content: space-between; align-items: center; margin-top: 0.6rem;">
+          <span id="ordersPageInfo"></span>
+          <div class="actions">
+            <button type="button" class="secondary" id="ordersPrevBtn">ก่อนหน้า</button>
+            <button type="button" class="secondary" id="ordersNextBtn">ถัดไป</button>
+          </div>
         </div>
       </div>
 
@@ -146,6 +156,13 @@
       let editingChickenTypeId = null;
       let editingOrderId = null;
       let dashboardOrders = [];
+      let orderSearchTerm = '';
+      let ordersCurrentPage = 1;
+      const ordersPageSize = 10;
+      const orderSearchInput = document.getElementById('orderSearchInput');
+      const ordersPrevBtn = document.getElementById('ordersPrevBtn');
+      const ordersNextBtn = document.getElementById('ordersNextBtn');
+      const ordersPageInfo = document.getElementById('ordersPageInfo');
 
       function applyDefaultCookingPrice() {
         const input = orderForm.querySelector('input[name="cookingPrice"]');
@@ -414,14 +431,59 @@
         document.getElementById('revenue').textContent = Number(data.totalRevenue ?? 0).toLocaleString();
         document.getElementById('paidRevenue').textContent = Number(data.paidRevenue ?? 0).toLocaleString();
 
+        dashboardOrders = Array.isArray(data.orders) ? data.orders : [];
+        renderOrdersTable();
+
+        defaultCookingPrice = Number(data.defaultCookingPrice ?? 30);
+        applyDefaultCookingPrice();
+      }
+
+      function getFilteredOrders() {
+        const term = orderSearchTerm.trim().toLowerCase();
+        if (!term) {
+          return dashboardOrders;
+        }
+
+        return dashboardOrders.filter((order) => {
+          const customer = order.customer || {};
+          const items = Array.isArray(order.items) ? order.items : [];
+          const itemsText = items
+            .map((item) => {
+              const matchedType = chickenTypes.find((type) => type.id === item.chickenTypeId);
+              return item.chickenTypeName || matchedType?.name || '';
+            })
+            .join(' ');
+          const haystack = [order.id, customer.name, customer.phone, itemsText]
+            .map((value) => String(value ?? '').toLowerCase())
+            .join(' ');
+          return haystack.includes(term);
+        });
+      }
+
+      function renderOrdersTable() {
         const tableBody = document.getElementById('ordersTableBody');
-        dashboardOrders = Array.isArray(data.orders) ? data.orders.slice(0, 20) : [];
-        if (!dashboardOrders.length) {
-          tableBody.innerHTML = '<tr><td colspan="7" class="empty">ยังไม่มีคำสั่งซื้อ</td></tr>';
+        const filteredOrders = getFilteredOrders();
+
+        if (!filteredOrders.length) {
+          tableBody.innerHTML = `<tr><td colspan="7" class="empty">${dashboardOrders.length ? 'ไม่พบคำสั่งซื้อที่ตรงกับการค้นหา' : 'ยังไม่มีคำสั่งซื้อ'}</td></tr>`;
+          ordersPageInfo.textContent = '';
+          ordersPrevBtn.disabled = true;
+          ordersNextBtn.disabled = true;
           return;
         }
 
-        tableBody.innerHTML = dashboardOrders.map((order) => {
+        const totalPages = Math.max(1, Math.ceil(filteredOrders.length / ordersPageSize));
+        if (ordersCurrentPage > totalPages) {
+          ordersCurrentPage = totalPages;
+        }
+        if (ordersCurrentPage < 1) {
+          ordersCurrentPage = 1;
+        }
+
+        const startIndex = (ordersCurrentPage - 1) * ordersPageSize;
+        const pageOrders = filteredOrders.slice(startIndex, startIndex + ordersPageSize);
+
+        tableBody.innerHTML = pageOrders.map((order) => {
           const customer = order.customer || {};
           const items = Array.isArray(order.items) ? order.items : [];
           const itemsText = items
@@ -449,8 +511,9 @@
           `;
         }).join('');
 
-        defaultCookingPrice = Number(data.defaultCookingPrice ?? 30);
-        applyDefaultCookingPrice();
+        ordersPageInfo.textContent = `หน้า ${ordersCurrentPage} จาก ${totalPages} (ทั้งหมด ${filteredOrders.length} รายการ)`;
+        ordersPrevBtn.disabled = ordersCurrentPage <= 1;
+        ordersNextBtn.disabled = ordersCurrentPage >= totalPages;
       }
 
       async function loadChickenTypes() {
@@ -620,6 +683,19 @@
 
       cancelOrderEditBtn.addEventListener('click', resetOrderForm);
       addItemBtn.addEventListener('click', addItemRow);
+      orderSearchInput.addEventListener('input', (event) => {
+        orderSearchTerm = event.target.value;
+        ordersCurrentPage = 1;
+        renderOrdersTable();
+      });
+      ordersPrevBtn.addEventListener('click', () => {
+        ordersCurrentPage -= 1;
+        renderOrdersTable();
+      });
+      ordersNextBtn.addEventListener('click', () => {
+        ordersCurrentPage += 1;
+        renderOrdersTable();
+      });
       addItemRow();
       loadChickenTypes().catch(() => {
         setStatus(chickenStatus, 'โหลดประเภทไก่ไม่สำเร็จ', true);

@@ -1,10 +1,17 @@
 import { SupabaseService } from '../common/supabase.service';
+import { OrdersService } from '../orders/orders.service';
 import { ChickenTypesService } from './chicken-types.service';
+
+function createOrdersServiceMock(): OrdersService {
+  return {
+    recalculatePricesForChickenType: jest.fn().mockResolvedValue(undefined),
+  } as unknown as OrdersService;
+}
 
 describe('ChickenTypesService', () => {
   it('creates and lists chicken types', async () => {
     const supabaseService = new SupabaseService();
-    const service = new ChickenTypesService(supabaseService);
+    const service = new ChickenTypesService(supabaseService, createOrdersServiceMock());
 
     const created = await service.create({
       name: 'ไก่ตัวผู้',
@@ -24,7 +31,7 @@ describe('ChickenTypesService', () => {
 
   it('persists through SupabaseService as single source of truth', async () => {
     const supabaseService = new SupabaseService();
-    const service = new ChickenTypesService(supabaseService);
+    const service = new ChickenTypesService(supabaseService, createOrdersServiceMock());
 
     const created = await service.create({
       name: 'ไก่จัมโบ้',
@@ -42,7 +49,7 @@ describe('ChickenTypesService', () => {
 
   it('updates an existing chicken type', async () => {
     const supabaseService = new SupabaseService();
-    const service = new ChickenTypesService(supabaseService);
+    const service = new ChickenTypesService(supabaseService, createOrdersServiceMock());
 
     const created = await service.create({
       name: 'ไก่บ้าน',

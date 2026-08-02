@@ -9,6 +9,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChickenTypesModule = void 0;
 const common_1 = require("@nestjs/common");
 const supabase_module_1 = require("../common/supabase.module");
+const orders_module_1 = require("../orders/orders.module");
 const chicken_types_controller_1 = require("./chicken-types.controller");
 const chicken_types_service_1 = require("./chicken-types.service");
 let ChickenTypesModule = class ChickenTypesModule {
@@ -16,7 +17,7 @@ let ChickenTypesModule = class ChickenTypesModule {
 exports.ChickenTypesModule = ChickenTypesModule;
 exports.ChickenTypesModule = ChickenTypesModule = __decorate([
     (0, common_1.Module)({
-        imports: [supabase_module_1.SupabaseModule],
+        imports: [supabase_module_1.SupabaseModule, (0, common_1.forwardRef)(() => orders_module_1.OrdersModule)],
         controllers: [chicken_types_controller_1.ChickenTypesController],
         providers: [chicken_types_service_1.ChickenTypesService],
         exports: [chicken_types_service_1.ChickenTypesService],

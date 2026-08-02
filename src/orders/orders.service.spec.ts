@@ -6,7 +6,9 @@ import { OrdersService } from './orders.service';
 describe('OrdersService', () => {
   it('calculates total amount for an order with multiple items', async () => {
     const supabaseService = new SupabaseService();
-    const chickenTypesService = new ChickenTypesService(supabaseService);
+    const chickenTypesService = new ChickenTypesService(supabaseService, {
+      recalculatePricesForChickenType: jest.fn().mockResolvedValue(undefined),
+    } as unknown as OrdersService);
     const customersService = new CustomersService(supabaseService);
     const service = new OrdersService(chickenTypesService, customersService, supabaseService);
 

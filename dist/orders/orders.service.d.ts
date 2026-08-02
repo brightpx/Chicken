@@ -39,4 +39,5 @@ export declare class OrdersService {
     create(input: CreateOrderInput): Promise<OrderResult>;
     findAll(): Promise<OrderResult[]>;
     update(id: string, input: UpdateOrderInput): Promise<OrderResult | null>;
+    recalculatePricesForChickenType(chickenTypeId: string, newAveragePrice: number): Promise<void>;
 }

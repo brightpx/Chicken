@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { getDefaultCookingPrice } from '../common/app-config';
 import { ChickenTypeRecord, SupabaseService } from '../common/supabase.service';
+import { OrdersService } from '../orders/orders.service';
 
 export interface CreateChickenTypeDto {
   name: string;
@@ -17,7 +18,11 @@ export type ChickenTypeEntity = ChickenTypeRecord;
 
 @Injectable()
 export class ChickenTypesService {
-  constructor(private readonly supabaseService: SupabaseService) {}
+  constructor(
+    private readonly supabaseService: SupabaseService,
+    @Inject(forwardRef(() => OrdersService))
+    private readonly ordersService: OrdersService,
+  ) {}
 
   async create(dto: CreateChickenTypeDto): Promise<ChickenTypeEntity> {
     const entity: ChickenTypeEntity = {
@@ -39,6 +44,13 @@ export class ChickenTypesService {
   }
 
   async update(id: string, dto: UpdateChickenTypeDto): Promise<ChickenTypeEntity | null> {
-    return this.supabaseService.updateChickenType(id, dto);
+    const existing = await this.supabaseService.findChickenTypeById(id);
+    const updated = await this.supabaseService.updateChickenType(id, dto);
+
+    if (updated && dto.averagePrice !== undefined && dto.averagePrice !== existing?.averagePrice) {
+      await this.ordersService.recalculatePricesForChickenType(id, updated.averagePrice);
+    }
+
+    return updated;
   }
 }

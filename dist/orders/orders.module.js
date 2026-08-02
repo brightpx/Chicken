@@ -18,7 +18,7 @@ let OrdersModule = class OrdersModule {
 exports.OrdersModule = OrdersModule;
 exports.OrdersModule = OrdersModule = __decorate([
     (0, common_1.Module)({
-        imports: [chicken_types_module_1.ChickenTypesModule, customers_module_1.CustomersModule, supabase_module_1.SupabaseModule],
+        imports: [(0, common_1.forwardRef)(() => chicken_types_module_1.ChickenTypesModule), customers_module_1.CustomersModule, supabase_module_1.SupabaseModule],
         controllers: [orders_controller_1.OrdersController],
         providers: [orders_service_1.OrdersService],
         exports: [orders_service_1.OrdersService],
