@@ -42,6 +42,8 @@
         <div class="card"><strong>รายได้ (จ่ายแล้ว)</strong><div class="metric" id="paidRevenue">-</div></div>
       </div>
 
+
+
       <div class="card">
         <h3>คำสั่งซื้อล่าสุด</h3>
         <div class="row" style="margin-bottom: 0.6rem;">
@@ -117,7 +119,18 @@
         </form>
         <div class="status" id="orderStatus"></div>
       </div>
-
+      <div class="card">
+        <h3>ตั้งค่าค่าเพิ่มการต้มเริ่มต้น</h3>
+        <form id="cookingPriceSettingForm">
+          <div class="row">
+            <label>ค่าเพิ่มการต้มเริ่มต้น (บาท)<input name="defaultCookingPrice" type="number" step="0.01" min="0" required /></label>
+          </div>
+          <div class="actions">
+            <button type="submit" id="cookingPriceSettingSubmitBtn">บันทึกและอัปเดตออเดอร์เก่า</button>
+          </div>
+        </form>
+        <div class="status" id="cookingPriceSettingStatus"></div>
+      </div>
       <div class="card">
         <h3>เพิ่มประเภทไก่และราคา</h3>
         <form id="chickenForm">
@@ -163,6 +176,8 @@
       const ordersPrevBtn = document.getElementById('ordersPrevBtn');
       const ordersNextBtn = document.getElementById('ordersNextBtn');
       const ordersPageInfo = document.getElementById('ordersPageInfo');
+      const cookingPriceSettingForm = document.getElementById('cookingPriceSettingForm');
+      const cookingPriceSettingStatus = document.getElementById('cookingPriceSettingStatus');
 
       function applyDefaultCookingPrice() {
         const input = orderForm.querySelector('input[name="cookingPrice"]');
@@ -233,7 +248,7 @@
                   <option value="boiled" ${item.preparationType === 'boiled' ? 'selected' : ''}>ต้ม</option>
                 </select>
               </label>
-              <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="${item.cookingPrice ?? 0}" /></label>
+              <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="${item.cookingPrice ?? 0}" disabled style="background:#f5eee0; cursor:not-allowed;" /></label>
               <label>ลบรายการ<button type="button" class="secondary" onclick="this.parentElement.parentElement.remove()">ลบ</button></label>
               <div class="item-summary" style="grid-column: 1 / -1; color: #8a4d12; font-size: 0.9rem;">กำลังคำนวณ...</div>
             `;
@@ -268,8 +283,30 @@
         await loadDashboard();
       }
 
+      async function deleteOrder(id) {
+        if (!confirm(`ยืนยันการลบคำสั่งซื้อ ${id}? การลบไม่สามารถย้อนกลับได้`)) {
+          return;
+        }
+
+        setStatus(orderStatus, 'กำลังลบคำสั่งซื้อ...');
+        const res = await fetch(`/orders/${id}`, { method: 'DELETE' });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          setStatus(orderStatus, 'ลบไม่สำเร็จ: ' + errorText, true);
+          return;
+        }
+
+        setStatus(orderStatus, 'ลบคำสั่งซื้อเรียบร้อย');
+        if (editingOrderId === id) {
+          resetOrderForm();
+        }
+        await loadDashboard();
+      }
+
       window.editOrder = editOrder;
       window.markOrderPaid = markOrderPaid;
+      window.deleteOrder = deleteOrder;
 
       function renderChickenTypes() {
         if (!chickenTypes.length) {
@@ -397,7 +434,7 @@
               <option value="boiled">ต้ม</option>
             </select>
           </label>
-          <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="0" /></label>
+          <label>ค่าเพิ่มการต้ม (บาท)<input name="cookingPrice" type="number" step="0.01" value="0" disabled style="background:#f5eee0; cursor:not-allowed;" /></label>
           <label>ลบรายการ<button type="button" class="secondary" onclick="this.parentElement.parentElement.remove()">ลบ</button></label>
           <div class="item-summary" style="grid-column: 1 / -1; color: #8a4d12; font-size: 0.9rem;">กำลังคำนวณ...</div>
         `;
@@ -436,6 +473,11 @@
 
         defaultCookingPrice = Number(data.defaultCookingPrice ?? 30);
         applyDefaultCookingPrice();
+
+        const cookingPriceSettingInput = cookingPriceSettingForm.querySelector('input[name="defaultCookingPrice"]');
+        if (cookingPriceSettingInput && document.activeElement !== cookingPriceSettingInput) {
+          cookingPriceSettingInput.value = defaultCookingPrice;
+        }
       }
 
       function getFilteredOrders() {
@@ -505,6 +547,7 @@
                 <div class="actions">
                   <button type="button" class="secondary" onclick="editOrder('${order.id}')">แก้ไข</button>
                   <button type="button" onclick="markOrderPaid('${order.id}')">ชำระแล้ว</button>
+                  <button type="button" class="secondary" onclick="deleteOrder('${order.id}')">ลบ</button>
                 </div>
               </td>
             </tr>
@@ -528,6 +571,33 @@
       }
 
       document.getElementById('cancelEditBtn').addEventListener('click', resetChickenForm);
+
+      cookingPriceSettingForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(cookingPriceSettingForm);
+        const value = Number(formData.get('defaultCookingPrice'));
+
+        if (!Number.isFinite(value) || value < 0) {
+          setStatus(cookingPriceSettingStatus, 'กรุณากรอกค่าเพิ่มการต้มให้ถูกต้อง', true);
+          return;
+        }
+
+        setStatus(cookingPriceSettingStatus, 'กำลังบันทึกและอัปเดตออเดอร์เก่า...');
+        const res = await fetch('/admin/default-cooking-price', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value }),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text();
+          setStatus(cookingPriceSettingStatus, 'บันทึกไม่สำเร็จ: ' + errorText, true);
+          return;
+        }
+
+        setStatus(cookingPriceSettingStatus, 'บันทึกค่าเพิ่มการต้มและอัปเดตออเดอร์เก่าเรียบร้อย');
+        await loadDashboard();
+      });
 
       chickenForm.addEventListener('submit', async (event) => {
         event.preventDefault();

@@ -38,6 +38,10 @@ export declare class OrdersService {
     constructor(chickenTypesService: ChickenTypesService, customersService: CustomersService, supabaseService: SupabaseService);
     create(input: CreateOrderInput): Promise<OrderResult>;
     findAll(): Promise<OrderResult[]>;
+    remove(id: string): Promise<{
+        success: boolean;
+    }>;
     update(id: string, input: UpdateOrderInput): Promise<OrderResult | null>;
     recalculatePricesForChickenType(chickenTypeId: string, newAveragePrice: number): Promise<void>;
+    recalculateCookingPriceForBoiledOrders(newCookingPrice: number): Promise<void>;
 }

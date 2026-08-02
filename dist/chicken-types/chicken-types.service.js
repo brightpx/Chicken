@@ -14,7 +14,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChickenTypesService = void 0;
 const common_1 = require("@nestjs/common");
-const app_config_1 = require("../common/app-config");
 const supabase_service_1 = require("../common/supabase.service");
 const orders_service_1 = require("../orders/orders.service");
 let ChickenTypesService = class ChickenTypesService {
@@ -25,6 +24,7 @@ let ChickenTypesService = class ChickenTypesService {
         this.ordersService = ordersService;
     }
     async create(dto) {
+        const defaultCookingPrice = await this.supabaseService.getDefaultCookingPriceSetting();
         const entity = {
             id: `chicken-${Date.now()}`,
             name: dto.name,
@@ -33,7 +33,7 @@ let ChickenTypesService = class ChickenTypesService {
             averagePrice: dto.averagePrice,
             isActive: true,
             preparationType: dto.preparationType ?? 'fresh',
-            cookingPrice: dto.cookingPrice ?? (0, app_config_1.getDefaultCookingPrice)(),
+            cookingPrice: dto.cookingPrice ?? defaultCookingPrice,
         };
         return this.supabaseService.createChickenType(entity);
     }

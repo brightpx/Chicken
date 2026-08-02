@@ -1,5 +1,4 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { getDefaultCookingPrice } from '../common/app-config';
 import { ChickenTypeRecord, SupabaseService } from '../common/supabase.service';
 import { OrdersService } from '../orders/orders.service';
 
@@ -25,6 +24,7 @@ export class ChickenTypesService {
   ) {}
 
   async create(dto: CreateChickenTypeDto): Promise<ChickenTypeEntity> {
+    const defaultCookingPrice = await this.supabaseService.getDefaultCookingPriceSetting();
     const entity: ChickenTypeEntity = {
       id: `chicken-${Date.now()}`,
       name: dto.name,
@@ -33,7 +33,7 @@ export class ChickenTypesService {
       averagePrice: dto.averagePrice,
       isActive: true,
       preparationType: dto.preparationType ?? 'fresh',
-      cookingPrice: dto.cookingPrice ?? getDefaultCookingPrice(),
+      cookingPrice: dto.cookingPrice ?? defaultCookingPrice,
     };
 
     return this.supabaseService.createChickenType(entity);

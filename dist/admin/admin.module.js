@@ -11,13 +11,14 @@ const common_1 = require("@nestjs/common");
 const chicken_types_module_1 = require("../chicken-types/chicken-types.module");
 const customers_module_1 = require("../customers/customers.module");
 const orders_module_1 = require("../orders/orders.module");
+const supabase_module_1 = require("../common/supabase.module");
 const admin_controller_1 = require("./admin.controller");
 let AdminModule = class AdminModule {
 };
 exports.AdminModule = AdminModule;
 exports.AdminModule = AdminModule = __decorate([
     (0, common_1.Module)({
-        imports: [chicken_types_module_1.ChickenTypesModule, customers_module_1.CustomersModule, orders_module_1.OrdersModule],
+        imports: [chicken_types_module_1.ChickenTypesModule, customers_module_1.CustomersModule, orders_module_1.OrdersModule, supabase_module_1.SupabaseModule],
         controllers: [admin_controller_1.AdminController],
     })
 ], AdminModule);

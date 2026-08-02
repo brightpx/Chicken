@@ -1,8 +1,8 @@
-import { Controller, Get } from '@nestjs/common';
-import { getDefaultCookingPrice } from '../common/app-config';
+import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrdersService } from '../orders/orders.service';
+import { SupabaseService } from '../common/supabase.service';
 
 @Controller('admin')
 export class AdminController {
@@ -10,14 +10,16 @@ export class AdminController {
     private readonly chickenTypesService: ChickenTypesService,
     private readonly customersService: CustomersService,
     private readonly ordersService: OrdersService,
+    private readonly supabaseService: SupabaseService,
   ) {}
 
   @Get('dashboard')
   async getDashboard() {
-    const [customers, chickenTypes, orders] = await Promise.all([
+    const [customers, chickenTypes, orders, defaultCookingPrice] = await Promise.all([
       this.customersService.findAll(),
       this.chickenTypesService.findAll(),
       this.ordersService.findAll(),
+      this.supabaseService.getDefaultCookingPriceSetting(),
     ]);
 
     const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
@@ -51,8 +53,16 @@ export class AdminController {
       totalOrders: orders.length,
       totalRevenue,
       paidRevenue,
-      defaultCookingPrice: getDefaultCookingPrice(),
+      defaultCookingPrice,
       orders: enrichedOrders,
     };
+  }
+
+  @Patch('default-cooking-price')
+  async updateDefaultCookingPrice(@Body() dto: { value: number }) {
+    const value = Number(dto.value);
+    await this.supabaseService.setDefaultCookingPriceSetting(value);
+    await this.ordersService.recalculateCookingPriceForBoiledOrders(value);
+    return { defaultCookingPrice: value };
   }
 }

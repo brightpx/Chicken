@@ -53,6 +53,7 @@ export class SupabaseService {
   private readonly memoryChickenTypes: ChickenTypeRecord[] = [];
   private readonly memoryCustomers: CustomerRecord[] = [];
   private readonly memoryOrders: OrderRecord[] = [];
+  private memoryDefaultCookingPrice: number | null = null;
 
   constructor() {
     const url = process.env.SUPABASE_URL;
@@ -76,6 +77,36 @@ export class SupabaseService {
 
   getClient(): SupabaseClient | null {
     return this.client;
+  }
+
+  async getDefaultCookingPriceSetting(): Promise<number> {
+    if (this.client) {
+      const { data, error } = await this.client.from('app_settings').select('value').eq('key', 'default_cooking_price').maybeSingle();
+      if (error) {
+        this.logger.warn(`Default cooking price lookup failed: ${error.message}`);
+      } else if (data) {
+        const parsed = Number(data.value);
+        return Number.isFinite(parsed) ? parsed : getDefaultCookingPrice();
+      }
+    }
+
+    return this.memoryDefaultCookingPrice ?? getDefaultCookingPrice();
+  }
+
+  async setDefaultCookingPriceSetting(value: number): Promise<number> {
+    this.memoryDefaultCookingPrice = value;
+
+    if (this.client) {
+      const { error } = await this.client
+        .from('app_settings')
+        .upsert({ key: 'default_cooking_price', value: String(value) });
+
+      if (error) {
+        this.logger.warn(`Default cooking price update failed: ${error.message}`);
+      }
+    }
+
+    return value;
   }
 
   async createChickenType(entity: ChickenTypeRecord): Promise<ChickenTypeRecord> {
@@ -299,6 +330,26 @@ export class SupabaseService {
     return null;
   }
 
+  async deleteOrder(id: string): Promise<boolean> {
+    const existingIndex = this.memoryOrders.findIndex((item) => item.id === id);
+    if (existingIndex !== -1) {
+      this.memoryOrders.splice(existingIndex, 1);
+      return true;
+    }
+
+    if (this.client) {
+      const { error } = await this.client.from('orders').delete().eq('id', id);
+      if (error) {
+        this.logger.warn(`Order delete failed: ${error.message}`);
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
   private mapChickenType(item: any): ChickenTypeRecord {
     return {
       id: item.id,
@@ -389,6 +440,11 @@ export class SupabaseService {
         delivery_status text not null,
         items jsonb not null,
         total_amount double precision not null
+      );
+
+      create table if not exists app_settings (
+        key text primary key,
+        value text not null
       );
     `;
 

@@ -44,8 +44,11 @@ export declare class SupabaseService {
     private readonly memoryChickenTypes;
     private readonly memoryCustomers;
     private readonly memoryOrders;
+    private memoryDefaultCookingPrice;
     constructor();
     getClient(): SupabaseClient | null;
+    getDefaultCookingPriceSetting(): Promise<number>;
+    setDefaultCookingPriceSetting(value: number): Promise<number>;
     createChickenType(entity: ChickenTypeRecord): Promise<ChickenTypeRecord>;
     findChickenTypeById(id: string): Promise<ChickenTypeRecord | null>;
     listChickenTypes(): Promise<ChickenTypeRecord[]>;
@@ -57,6 +60,7 @@ export declare class SupabaseService {
     findOrderById(id: string): Promise<OrderRecord | null>;
     listOrders(): Promise<OrderRecord[]>;
     updateOrder(id: string, dto: Partial<OrderRecord>): Promise<OrderRecord | null>;
+    deleteOrder(id: string): Promise<boolean>;
     private mapChickenType;
     private mapCustomer;
     private mapOrder;

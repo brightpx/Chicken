@@ -1,5 +1,4 @@
 import { forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { getDefaultCookingPrice } from '../common/app-config';
 import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrderItemRecord, OrderRecord, SupabaseService } from '../common/supabase.service';
@@ -54,9 +53,10 @@ export class OrdersService {
     }
 
     const chickenTypes = await this.chickenTypesService.findAll();
+    const defaultCookingPrice = await this.supabaseService.getDefaultCookingPriceSetting();
 
     const preparationType = input.preparationType ?? 'fresh';
-    const cookingPrice = preparationType === 'boiled' ? (input.cookingPrice ?? getDefaultCookingPrice() ?? 30) : 0;
+    const cookingPrice = preparationType === 'boiled' ? (input.cookingPrice ?? defaultCookingPrice) : 0;
 
     const items = input.items.map((item) => {
       const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
@@ -93,6 +93,16 @@ export class OrdersService {
     return this.supabaseService.listOrders();
   }
 
+  async remove(id: string): Promise<{ success: boolean }> {
+    const existing = await this.supabaseService.findOrderById(id);
+    if (!existing) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const success = await this.supabaseService.deleteOrder(id);
+    return { success };
+  }
+
   async update(id: string, input: UpdateOrderInput): Promise<OrderResult | null> {
     const existing = await this.supabaseService.findOrderById(id);
     if (!existing) {
@@ -103,9 +113,10 @@ export class OrdersService {
       ? await Promise.all(
           input.items.map(async (item) => {
             const chickenTypes = await this.chickenTypesService.findAll();
+            const defaultCookingPrice = await this.supabaseService.getDefaultCookingPriceSetting();
             const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
             const itemPreparationType = item.preparationType ?? 'fresh';
-            const itemCookingPrice = itemPreparationType === 'boiled' ? (item.cookingPrice ?? getDefaultCookingPrice() ?? 30) : 0;
+            const itemCookingPrice = itemPreparationType === 'boiled' ? (item.cookingPrice ?? defaultCookingPrice) : 0;
             const unitPrice = (chicken?.averagePrice ?? 0) + itemCookingPrice;
             const totalPrice = unitPrice * item.quantity;
             return {
@@ -147,6 +158,40 @@ export class OrdersService {
           const unitPrice = newAveragePrice + (item.cookingPrice ?? 0);
           return {
             ...item,
+            unitPrice,
+            totalPrice: unitPrice * item.quantity,
+          } satisfies OrderItemRecord;
+        });
+
+        const totalAmount = updatedItems.reduce((sum, item) => sum + item.totalPrice, 0);
+        return this.supabaseService.updateOrder(order.id, { items: updatedItems, totalAmount });
+      }),
+    );
+  }
+
+  // Keeps existing boiled-item orders in sync when the default cooking price setting changes.
+  async recalculateCookingPriceForBoiledOrders(newCookingPrice: number): Promise<void> {
+    const [orders, chickenTypes] = await Promise.all([
+      this.supabaseService.listOrders(),
+      this.chickenTypesService.findAll(),
+    ]);
+
+    const affectedOrders = orders.filter((order) =>
+      order.items.some((item) => item.preparationType === 'boiled'),
+    );
+
+    await Promise.all(
+      affectedOrders.map((order) => {
+        const updatedItems = order.items.map((item) => {
+          if (item.preparationType !== 'boiled') {
+            return item;
+          }
+
+          const chicken = chickenTypes.find((entry) => entry.id === item.chickenTypeId);
+          const unitPrice = (chicken?.averagePrice ?? 0) + newCookingPrice;
+          return {
+            ...item,
+            cookingPrice: newCookingPrice,
             unitPrice,
             totalPrice: unitPrice * item.quantity,
           } satisfies OrderItemRecord;

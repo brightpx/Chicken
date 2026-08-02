@@ -5,4 +5,7 @@ export declare class OrdersController {
     create(dto: CreateOrderInput): Promise<import("../common/supabase.service").OrderRecord>;
     findAll(): Promise<import("../common/supabase.service").OrderRecord[]>;
     update(id: string, dto: UpdateOrderInput): Promise<import("../common/supabase.service").OrderRecord | null>;
+    remove(id: string): Promise<{
+        success: boolean;
+    }>;
 }

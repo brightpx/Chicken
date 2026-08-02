@@ -22,6 +22,7 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
     memoryChickenTypes = [];
     memoryCustomers = [];
     memoryOrders = [];
+    memoryDefaultCookingPrice = null;
     constructor() {
         const url = process.env.SUPABASE_URL;
         const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -42,6 +43,31 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
     }
     getClient() {
         return this.client;
+    }
+    async getDefaultCookingPriceSetting() {
+        if (this.client) {
+            const { data, error } = await this.client.from('app_settings').select('value').eq('key', 'default_cooking_price').maybeSingle();
+            if (error) {
+                this.logger.warn(`Default cooking price lookup failed: ${error.message}`);
+            }
+            else if (data) {
+                const parsed = Number(data.value);
+                return Number.isFinite(parsed) ? parsed : (0, app_config_1.getDefaultCookingPrice)();
+            }
+        }
+        return this.memoryDefaultCookingPrice ?? (0, app_config_1.getDefaultCookingPrice)();
+    }
+    async setDefaultCookingPriceSetting(value) {
+        this.memoryDefaultCookingPrice = value;
+        if (this.client) {
+            const { error } = await this.client
+                .from('app_settings')
+                .upsert({ key: 'default_cooking_price', value: String(value) });
+            if (error) {
+                this.logger.warn(`Default cooking price update failed: ${error.message}`);
+            }
+        }
+        return value;
     }
     async createChickenType(entity) {
         if (this.client) {
@@ -252,6 +278,22 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         }
         return null;
     }
+    async deleteOrder(id) {
+        const existingIndex = this.memoryOrders.findIndex((item) => item.id === id);
+        if (existingIndex !== -1) {
+            this.memoryOrders.splice(existingIndex, 1);
+            return true;
+        }
+        if (this.client) {
+            const { error } = await this.client.from('orders').delete().eq('id', id);
+            if (error) {
+                this.logger.warn(`Order delete failed: ${error.message}`);
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
     mapChickenType(item) {
         return {
             id: item.id,
@@ -338,6 +380,11 @@ let SupabaseService = SupabaseService_1 = class SupabaseService {
         delivery_status text not null,
         items jsonb not null,
         total_amount double precision not null
+      );
+
+      create table if not exists app_settings (
+        key text primary key,
+        value text not null
       );
     `;
         try {
