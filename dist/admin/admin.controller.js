@@ -117,6 +117,15 @@ let AdminController = class AdminController {
             return `${customer?.name || id}: ${count} ออเดอร์`;
         })
             .join(', ');
+        const customerList = customers.map(c => `${c.name} (ID: ${c.id})`).join(', ');
+        const recentOrders = orders.slice(-10).reverse().map(order => {
+            const customer = customers.find(c => c.id === order.customerId);
+            const items = order.items?.map(item => {
+                const chicken = chickenTypes.find(c => c.id === item.chickenTypeId);
+                return `${chicken?.name || 'ไก่'} x${item.quantity}`;
+            }).join(', ') || 'ไม่มีรายการ';
+            return `Order ${order.id}: ${customer?.name || 'ไม่ระบุ'} - ${items} - ${order.totalAmount} บาท`;
+        }).join('\n');
         const context = `
 สรุปร้านไก่:
 - ลูกค้า: ${customers.length} คน
@@ -128,8 +137,13 @@ let AdminController = class AdminController {
 - ประเภทไก่ขายดี: ${topChickenTypes || 'ไม่มีข้อมูล'}
 - ลูกค้าซื้อเยอะ: ${topCustomers || 'ไม่มีข้อมูล'}
 
+รายชื่อลูกค้า: ${customerList}
+
 ประเภทไก่:
 ${chickenTypes.filter(c => c.isActive).map(ct => `- ${ct.name}: ${ct.averagePrice} บาท/ชิ้น (${ct.preparationType})`).join('\n')}
+
+คำสั่งซื้อล่าสุด (10 ออเดอร์):
+${recentOrders}
 `;
         const prompt = `${context}\nคำถาม: ${dto.message}\n\nตอบสั้นๆ เป็นภาษาไทย`;
         const response = await this.groqService.generateChatCompletion(prompt);
