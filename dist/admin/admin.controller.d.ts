@@ -2,12 +2,14 @@ import { ChickenTypesService } from '../chicken-types/chicken-types.service';
 import { CustomersService } from '../customers/customers.service';
 import { OrdersService } from '../orders/orders.service';
 import { SupabaseService } from '../common/supabase.service';
+import { GroqService } from '../groq/groq.service';
 export declare class AdminController {
     private readonly chickenTypesService;
     private readonly customersService;
     private readonly ordersService;
     private readonly supabaseService;
-    constructor(chickenTypesService: ChickenTypesService, customersService: CustomersService, ordersService: OrdersService, supabaseService: SupabaseService);
+    private readonly groqService;
+    constructor(chickenTypesService: ChickenTypesService, customersService: CustomersService, ordersService: OrdersService, supabaseService: SupabaseService, groqService: GroqService);
     getDashboard(): Promise<{
         totalCustomers: number;
         totalChickenTypes: number;
@@ -42,5 +44,10 @@ export declare class AdminController {
         value: number;
     }): Promise<{
         defaultCookingPrice: number;
+    }>;
+    chatWithAI(dto: {
+        message: string;
+    }): Promise<{
+        response: string;
     }>;
 }

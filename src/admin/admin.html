@@ -182,6 +182,146 @@
         box-shadow: 0 8px 18px rgba(245, 176, 65, 0.38);
       }
 
+      .chat-btn {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: white;
+        border: none;
+        cursor: pointer;
+        box-shadow: 0 4px 16px rgba(217, 83, 79, 0.4);
+        font-size: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        z-index: 1000;
+      }
+
+      .chat-btn:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 20px rgba(217, 83, 79, 0.5);
+      }
+
+      .chat-popup {
+        position: fixed;
+        bottom: 96px;
+        right: 24px;
+        width: 380px;
+        max-height: 500px;
+        background: var(--card-bg);
+        backdrop-filter: blur(6px);
+        border-radius: 16px;
+        box-shadow: 0 8px 32px rgba(154, 96, 32, 0.2);
+        border: 1px solid var(--border);
+        display: none;
+        flex-direction: column;
+        z-index: 1000;
+        animation: floatIn 0.3s ease both;
+      }
+
+      .chat-popup.active {
+        display: flex;
+      }
+
+      .chat-header {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: linear-gradient(180deg, #fff5e8, #fdecd3);
+        border-radius: 16px 16px 0 0;
+      }
+
+      .chat-header h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: #8a4d12;
+      }
+
+      .chat-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: var(--accent);
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.2s ease;
+      }
+
+      .chat-close:hover {
+        background: rgba(217, 83, 79, 0.1);
+      }
+
+      .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        min-height: 200px;
+        max-height: 300px;
+      }
+
+      .chat-message {
+        padding: 0.8rem 1rem;
+        border-radius: 12px;
+        max-width: 85%;
+        animation: fadeInUp 0.3s ease both;
+      }
+
+      .chat-message.user {
+        background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+        color: white;
+        align-self: flex-end;
+      }
+
+      .chat-message.ai {
+        background: #fff6e6;
+        color: var(--text);
+        align-self: flex-start;
+        border: 1px solid var(--border);
+      }
+
+      .chat-input-area {
+        padding: 1rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 0.5rem;
+      }
+
+      .chat-input-area input {
+        flex: 1;
+        border-radius: 20px;
+        padding: 0.7rem 1rem;
+      }
+
+      .chat-input-area button {
+        border-radius: 20px;
+        padding: 0.7rem 1.2rem;
+        white-space: nowrap;
+      }
+
+      .typing-indicator {
+        font-style: italic;
+        color: #8a4d12;
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+        animation: fadeIn 0.3s ease both;
+      }
+
       .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #fce8d4; color: #8a4d12; font-size: 0.8rem; }
 
       .list { display: grid; gap: 0.5rem; }
@@ -375,6 +515,25 @@
         <div class="list" id="chickenList"></div>
       </div>
 
+    </div>
+
+    <button class="chat-btn" id="chatBtn" title="คุยกับ AI">💬</button>
+
+    <div class="chat-popup" id="chatPopup">
+      <div class="chat-header">
+        <h3>💬 คุยกับ AI ผู้ช่วยร้านไก่</h3>
+        <button class="chat-close" id="chatClose">×</button>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-message ai">
+          สวัสดีครับ! ผมคือ AI ผู้ช่วยของร้านไก่ มีอะไรให้ผมช่วยไหมครับ?
+        </div>
+      </div>
+      <div class="typing-indicator" id="typingIndicator" style="display: none;">กำลังพิมพ์...</div>
+      <div class="chat-input-area">
+        <input type="text" id="chatInput" placeholder="พิมพ์ข้อความ..." />
+        <button type="button" id="chatSendBtn">ส่ง</button>
+      </div>
     </div>
 
     <script>
@@ -994,6 +1153,68 @@
         ordersCurrentPage += 1;
         renderOrdersTable();
       });
+
+      // AI Chat functionality
+      const chatBtn = document.getElementById('chatBtn');
+      const chatPopup = document.getElementById('chatPopup');
+      const chatClose = document.getElementById('chatClose');
+      const chatInput = document.getElementById('chatInput');
+      const chatSendBtn = document.getElementById('chatSendBtn');
+      const chatMessages = document.getElementById('chatMessages');
+      const typingIndicator = document.getElementById('typingIndicator');
+
+      chatBtn.addEventListener('click', () => {
+        chatPopup.classList.toggle('active');
+      });
+
+      chatClose.addEventListener('click', () => {
+        chatPopup.classList.remove('active');
+      });
+
+      function addChatMessage(message, isUser = false) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `chat-message ${isUser ? 'user' : 'ai'}`;
+        messageDiv.textContent = message;
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      async function sendChatMessage() {
+        const message = chatInput.value.trim();
+        if (!message) return;
+
+        addChatMessage(message, true);
+        chatInput.value = '';
+        typingIndicator.style.display = 'block';
+
+        try {
+          const res = await fetch('/admin/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message }),
+          });
+
+          if (!res.ok) {
+            throw new Error('Failed to get AI response');
+          }
+
+          const data = await res.json();
+          typingIndicator.style.display = 'none';
+          addChatMessage(data.response, false);
+        } catch (error) {
+          typingIndicator.style.display = 'none';
+          addChatMessage('เกิดข้อผิดพลาดในการสื่อสารกับ AI กรุณาลองใหม่', false);
+        }
+      }
+
+      chatSendBtn.addEventListener('click', sendChatMessage);
+
+      chatInput.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter') {
+          sendChatMessage();
+        }
+      });
+
       addItemRow();
       loadChickenTypes().catch(() => {
         setStatus(chickenStatus, 'โหลดประเภทไก่ไม่สำเร็จ', true);
