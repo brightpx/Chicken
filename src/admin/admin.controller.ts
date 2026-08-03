@@ -76,37 +76,64 @@ export class AdminController {
       this.ordersService.findAll(),
     ]);
 
-    const customerMap = new Map(customers.map((customer) => [customer.id, customer]));
-    const chickenTypeMap = new Map(chickenTypes.map((chickenType) => [chickenType.id, chickenType]));
-    const enrichedOrders = orders.map((order) => ({
-      ...order,
-      customerName: customerMap.get(order.customerId)?.name ?? order.customerId,
-      customer: customerMap.get(order.customerId) ?? null,
-      items: Array.isArray(order.items)
-        ? order.items.map((item) => {
-            const chickenType = chickenTypeMap.get(item.chickenTypeId);
-            return {
-              ...item,
-              chickenTypeName: chickenType?.name ?? 'ไก่',
-            };
-          })
-        : [],
-    }));
+    // สรุปข้อมูลสถิติแทนการส่งข้อมูลทั้งหมด
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const paidRevenue = orders.filter(o => o.paymentStatus === 'paid').reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const pendingOrders = orders.filter(o => o.deliveryStatus === 'pending').length;
+    const deliveredOrders = orders.filter(o => o.deliveryStatus === 'delivered').length;
+    const cancelledOrders = orders.filter(o => o.deliveryStatus === 'cancelled').length;
 
+    // สรุปประเภทไก่ที่ขายดี
+    const chickenSales = new Map<string, number>();
+    orders.forEach(order => {
+      order.items?.forEach(item => {
+        const current = chickenSales.get(item.chickenTypeId) || 0;
+        chickenSales.set(item.chickenTypeId, current + item.quantity);
+      });
+    });
+
+    const topChickenTypes = Array.from(chickenSales.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, qty]) => {
+        const chicken = chickenTypes.find(c => c.id === id);
+        return `${chicken?.name || id}: ${qty} ชิ้น`;
+      })
+      .join(', ');
+
+    // สรุปลูกค้าที่ซื้อเยอะ
+    const customerOrders = new Map<string, number>();
+    orders.forEach(order => {
+      const current = customerOrders.get(order.customerId) || 0;
+      customerOrders.set(order.customerId, current + 1);
+    });
+
+    const topCustomers = Array.from(customerOrders.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id, count]) => {
+        const customer = customers.find(c => c.id === id);
+        return `${customer?.name || id}: ${count} ออเดอร์`;
+      })
+      .join(', ');
+
+    // จัดรูปแบบ context ให้กระชับ
     const context = `
-ข้อมูลร้านไก่:
+สรุปร้านไก่:
+- ลูกค้า: ${customers.length} คน
+- ประเภทไก่: ${chickenTypes.length} ประเภท (${chickenTypes.filter(c => c.isActive).length} ใช้งาน)
+- คำสั่งซื้อ: ${orders.length} ออเดอร์
+- รายได้รวม: ${totalRevenue.toFixed(2)} บาท
+- รายได้จ่ายแล้ว: ${paidRevenue.toFixed(2)} บาท
+- สถานะจัดส่ง: รอ ${pendingOrders}, จัดส่งแล้ว ${deliveredOrders}, ยกเลิก ${cancelledOrders}
+- ประเภทไก่ขายดี: ${topChickenTypes || 'ไม่มีข้อมูล'}
+- ลูกค้าซื้อเยอะ: ${topCustomers || 'ไม่มีข้อมูล'}
 
-ลูกค้าทั้งหมด (${customers.length} คน):
-${customers.map(c => `- ID: ${c.id}, ชื่อ: ${c.name}, เบอร์: ${c.phone}, ที่อยู่: ${c.address}, วิธีจัดส่ง: ${c.deliveryMethod}`).join('\n')}
-
-ประเภทไก่ทั้งหมด (${chickenTypes.length} ประเภท):
-${chickenTypes.map(ct => `- ID: ${ct.id}, ชื่อ: ${ct.name}, น้ำหนัก/กก: ${ct.unitWeightKg}, ราคา/กก: ${ct.pricePerKg}, ราคาเฉลี่ย: ${ct.averagePrice}, สถานะ: ${ct.isActive ? 'ใช้งาน' : 'ไม่ใช้งาน'}, วิธีเตรียม: ${ct.preparationType}, ค่าต้ม: ${ct.cookingPrice}`).join('\n')}
-
-คำสั่งซื้อทั้งหมด (${orders.length} ออเดอร์):
-${enrichedOrders.map(o => `- Order ID: ${o.id}, ลูกค้า: ${o.customerName}, วิธีจัดส่ง: ${o.deliveryMethod}, สถานะชำระ: ${o.paymentStatus}, สถานะจัดส่ง: ${o.deliveryStatus}, รวมเงิน: ${o.totalAmount}, รายการ: ${o.items.map(i => `${i.chickenTypeName} x${i.quantity} @${i.unitPrice}`).join(', ')}`).join('\n')}
+ประเภทไก่:
+${chickenTypes.filter(c => c.isActive).map(ct => `- ${ct.name}: ${ct.averagePrice} บาท/ชิ้น (${ct.preparationType})`).join('\n')}
 `;
 
-    const prompt = `${context}\n\nคำถามจากผู้ใช้: ${dto.message}\n\nโปรดตอบคำถามโดยใช้ข้อมูลด้านบน ตอบเป็นภาษาไทย และเป็นมิตรต่อผู้ใช้`;
+    const prompt = `${context}\nคำถาม: ${dto.message}\n\nตอบสั้นๆ เป็นภาษาไทย`;
 
     const response = await this.groqService.generateChatCompletion(prompt);
     return { response };
